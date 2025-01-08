@@ -1,6 +1,6 @@
 from enum import Enum
 
 class Gesture(Enum):
-    ROCK = "PIERRE"
-    PAPER = "FEUILLE"
-    SCISSORS = "CISEAUX"
+    PIERRE = "PIERRE"
+    FEUILLE = "FEUILLE"
+    CISEAUX = "CISEAUX"
