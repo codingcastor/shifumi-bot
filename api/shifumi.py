@@ -40,15 +40,62 @@ class handler(BaseHTTPRequestHandler):
             'api_app_id': params.get('api_app_id', [''])[0]
         }
 
-        # Get channel mode and prepare message text
-        channel_mode = get_channel_mode(slack_params['channel_id'])
-        message_text = slack_params['text']
+        # Initialize game table if needed
+        init_game_table()
 
-        # Send delayed response to response_url
-        delayed_response = {
-            'response_type': 'in_channel',
-            'text': message_text
-        }
+        # Parse the move
+        try:
+            move = Gesture(slack_params['text'].upper())
+        except ValueError:
+            delayed_response = {
+                'response_type': 'ephemeral',
+                'text': f"Invalid move! Please use one of: {', '.join([g.value for g in Gesture])}"
+            }
+            requests.post(slack_params['response_url'], json=delayed_response)
+            return
+
+        # Check for pending game
+        pending_game = get_pending_game(slack_params['channel_id'])
+
+        if pending_game:
+            game_id, player1_id, player1_move, _, _ = pending_game
+            
+            # Don't allow same player to play twice
+            if player1_id == slack_params['user_id']:
+                delayed_response = {
+                    'response_type': 'ephemeral',
+                    'text': "You can't play against yourself! Wait for another player."
+                }
+            else:
+                # Complete the game
+                update_game(game_id, slack_params['user_id'], move.value)
+                
+                # Determine winner
+                move1 = Gesture(player1_move)
+                move2 = move
+                
+                if move1 == move2:
+                    result = "It's a tie!"
+                elif (
+                    (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
+                    (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
+                    (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
+                ):
+                    result = f"<@{player1_id}> wins!"
+                else:
+                    result = f"<@{slack_params['user_id']}> wins!"
+                
+                delayed_response = {
+                    'response_type': 'in_channel',
+                    'text': f"Game Result:\n<@{player1_id}> played {move1.value}\n<@{slack_params['user_id']}> played {move2.value}\n{result}"
+                }
+        else:
+            # Start new game
+            create_game(slack_params['channel_id'], slack_params['user_id'], move.value)
+            delayed_response = {
+                'response_type': 'in_channel',
+                'text': f"<@{slack_params['user_id']}> played {move.value}. Waiting for an opponent!"
+            }
         requests.post(
             slack_params['response_url'],
             json=delayed_response
