@@ -2,7 +2,10 @@ from http.server import BaseHTTPRequestHandler
 import requests
 from urllib.parse import parse_qs
 import os
-from lib.database import store_message, get_channel_mode, store_inappropriate_message
+from lib.database import (
+    store_message, get_channel_mode, store_inappropriate_message,
+    init_game_table, get_pending_game, create_game, update_game
+)
 from lib.slack import verify_slack_request
 from lib.types import Gesture
 
