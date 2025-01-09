@@ -1,3 +1,4 @@
+import json
 from http.server import BaseHTTPRequestHandler
 import requests
 from urllib.parse import parse_qs
@@ -50,18 +51,26 @@ class handler(BaseHTTPRequestHandler):
         if slack_params['text'].lower().startswith('nickname '):
             nickname = slack_params['text'][9:].strip()  # Remove 'nickname ' prefix
             if not nickname:
-                delayed_response = {
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
                     'response_type': 'ephemeral',
                     'text': "Please provide a nickname. Usage: /shifumi nickname <your-nickname>"
                 }
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
             else:
                 set_nickname(slack_params['user_id'], nickname)
-                delayed_response = {
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
                     'response_type': 'ephemeral',
                     'text': f"Your nickname has been set to: {nickname}"
                 }
-            requests.post(slack_params['response_url'], json=delayed_response)
-            return
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
 
         # Parse the command text
         text_parts = slack_params['text'].upper().split()
@@ -72,11 +81,14 @@ class handler(BaseHTTPRequestHandler):
             try:
                 move = Gesture(text_parts[1])
             except ValueError:
-                delayed_response = {
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
                     'response_type': 'ephemeral',
                     'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
                 }
-                requests.post(slack_params['response_url'], json=delayed_response)
+                self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
 
             # Check if this is a response to a challenge
@@ -148,10 +160,15 @@ class handler(BaseHTTPRequestHandler):
 
             # Don't allow same player to play twice
             if player1_id == slack_params['user_id']:
-                delayed_response = {
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
                     'response_type': 'ephemeral',
                     'text': "You can't play against yourself! Wait for another player."
                 }
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
             else:
                 # Complete the game
                 update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
