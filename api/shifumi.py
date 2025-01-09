@@ -48,7 +48,7 @@ class handler(BaseHTTPRequestHandler):
         init_tables()
 
         # Parse the command text
-        text_parts = slack_params['text'].upper().split()
+        text_parts = slack_params['text'].split()
 
         user_nickname = get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'
 
