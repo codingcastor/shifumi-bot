@@ -63,7 +63,15 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             # Create game with specific opponent
-            create_game(slack_params['channel_id'], slack_params['user_id'], move.value, challenged_user)
+            create_game(
+                slack_params['channel_id'],
+                slack_params['channel_name'],
+                slack_params['user_id'],
+                slack_params['user_name'],
+                move.value,
+                challenged_user,
+                None  # We don't have the challenger's name yet
+            )
             delayed_response = {
                 'response_type': 'in_channel',
                 'text': f"<@{slack_params['user_id']}> défie <@{challenged_user}> ! En attente de sa réponse..."
@@ -96,7 +104,7 @@ class handler(BaseHTTPRequestHandler):
                 }
             else:
                 # Complete the game
-                update_game(game_id, slack_params['user_id'], move.value)
+                update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
 
             # Determine winner
             move1 = Gesture(player1_move)
@@ -119,7 +127,13 @@ class handler(BaseHTTPRequestHandler):
             }
         else:
             # Start new game
-            create_game(slack_params['channel_id'], slack_params['user_id'], move.value)
+            create_game(
+                slack_params['channel_id'],
+                slack_params['channel_name'],
+                slack_params['user_id'],
+                slack_params['user_name'],
+                move.value
+            )
             delayed_response = {
                 'response_type': 'in_channel',
                 'text': f"<@{slack_params['user_id']}> a joué. En attente d'un adversaire..."
