@@ -47,33 +47,10 @@ class handler(BaseHTTPRequestHandler):
         # Initialize tables if needed
         init_tables()
 
-        # Handle nickname command
-        if slack_params['text'].lower().startswith('nickname '):
-            nickname = slack_params['text'][9:].strip()  # Remove 'nickname ' prefix
-            if not nickname:
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                response = {
-                    'response_type': 'ephemeral',
-                    'text': "Please provide a nickname. Usage: /shifumi nickname <your-nickname>"
-                }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                return
-            else:
-                set_nickname(slack_params['user_id'], nickname)
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                response = {
-                    'response_type': 'ephemeral',
-                    'text': f"Your nickname has been set to: {nickname}"
-                }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                return
-
         # Parse the command text
         text_parts = slack_params['text'].upper().split()
+
+        user_nickname = get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'
 
         # Check if it's a direct challenge or challenge response
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
@@ -101,6 +78,7 @@ class handler(BaseHTTPRequestHandler):
             if pending_challenge:
                 # This is a response to a challenge
                 game_id, challenger_id, challenger_move = pending_challenge
+                challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
                 update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
 
                 # Determine winner
@@ -114,13 +92,13 @@ class handler(BaseHTTPRequestHandler):
                         (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
                         (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
                 ):
-                    result = f"{get_nickname(challenger_id) or f'<@{challenger_id}>'} gagne !"
+                    result = f"{challenger_nickname} gagne !"
                 else:
-                    result = f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} gagne !"
+                    result = f"{user_nickname} gagne !"
 
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"Résultat du défi:\n<@{challenger_id}> a joué {move1.value}\n<@{slack_params['user_id']}> a joué {move2.value}\n{result}"
+                    'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.value}\n{user_nickname} a joué {move2.value}\n{result}"
                 }
             else:
                 # This is a new challenge
@@ -133,9 +111,10 @@ class handler(BaseHTTPRequestHandler):
                     target_user,
                     None  # We don't have the opponent's name yet
                 )
+                target_nickname = get_nickname(target_user) or f'<@{target_user}>'
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} défie {get_nickname(target_user) or f'<@{target_user}>'} ! Pour accepter le défi, utilisez '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
+                    'text': f"{user_nickname} défie {target_nickname} ! Pour accepter le défi, utilise '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
                 }
             
             requests.post(slack_params['response_url'], json=delayed_response)
@@ -165,13 +144,15 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 response = {
                     'response_type': 'ephemeral',
-                    'text': "You can't play against yourself! Wait for another player."
+                    'text': "Tu ne peux pas jouer contre toi-même ! Attend un autre joueur."
                 }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
             else:
                 # Complete the game
                 update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
+
+            player1_nickname = get_nickname(player1_id) or f'<@{player1_id}>'
 
             # Determine winner
             move1 = Gesture(player1_move)
@@ -184,13 +165,13 @@ class handler(BaseHTTPRequestHandler):
                     (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
                     (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
             ):
-                result = f"<@{player1_id}> gagne !"
+                result = f"{player1_nickname} gagne !"
             else:
-                result = f"<@{slack_params['user_id']}> gagne !"
+                result = f"{user_nickname} gagne !"
 
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"Résultat:\n{get_nickname(player1_id) or f'<@{player1_id}>'} a joué {move1.value}\n{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} a joué {move2.value}\n{result}"
+                'text': f"Résultat:\n{player1_nickname} a joué {move1.value}\n{user_nickname} a joué {move2.value}\n{result}"
             }
         else:
             # Start new game
@@ -203,7 +184,7 @@ class handler(BaseHTTPRequestHandler):
             )
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} a joué. En attente d'un adversaire..."
+                'text': f"{user_nickname} a joué. En attente d'un adversaire..."
             }
         requests.post(
             slack_params['response_url'],
