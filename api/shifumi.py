@@ -145,11 +145,11 @@ class handler(BaseHTTPRequestHandler):
         try:
             move = Gesture(text_parts[0])
         except ValueError:
-            delayed_response = {
+            response = {
                 'response_type': 'ephemeral',
                 'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
             }
-            requests.post(slack_params['response_url'], json=delayed_response)
+            self.wfile.write(json.dumps(response).encode('utf-8'))
             return
 
         # Check for pending game
