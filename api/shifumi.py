@@ -3,7 +3,8 @@ import requests
 from urllib.parse import parse_qs
 import os
 from lib.database import (
-    init_game_table, get_pending_game, create_game, update_game
+    init_game_table, get_pending_game, create_game, update_game,
+    get_pending_challenge
 )
 from lib.slack import verify_slack_request
 from lib.types import Gesture
