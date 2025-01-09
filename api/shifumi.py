@@ -63,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 response = {
                     'response_type': 'ephemeral',
-                    'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
+                    'text': f"Geste invalide ! Valeurs possibles : :caillou:, :feuilles:, :ciseaux:"
                 }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
