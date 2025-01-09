@@ -48,10 +48,9 @@ class handler(BaseHTTPRequestHandler):
         # Parse the command text
         text_parts = slack_params['text'].upper().split()
 
-        # Check if it's a direct challenge
+        # Check if it's a direct challenge or challenge response
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
-            # Direct challenge to specific user
-            challenged_user = text_parts[0][2:-1]  # Remove <@ and >
+            target_user = text_parts[0][2:-1]  # Remove <@ and >
             try:
                 move = Gesture(text_parts[1])
             except ValueError:
@@ -62,20 +61,53 @@ class handler(BaseHTTPRequestHandler):
                 requests.post(slack_params['response_url'], json=delayed_response)
                 return
 
-            # Create game with specific opponent
-            create_game(
+            # Check if this is a response to a challenge
+            pending_challenge = get_pending_challenge(
                 slack_params['channel_id'],
-                slack_params['channel_name'],
-                slack_params['user_id'],
-                slack_params['user_name'],
-                move.value,
-                challenged_user,
-                None  # We don't have the challenger's name yet
+                target_user,  # The challenger
+                slack_params['user_id']  # The current player
             )
-            delayed_response = {
-                'response_type': 'in_channel',
-                'text': f"<@{slack_params['user_id']}> défie <@{challenged_user}> ! En attente de sa réponse..."
-            }
+
+            if pending_challenge:
+                # This is a response to a challenge
+                game_id, challenger_id, challenger_move = pending_challenge
+                update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
+
+                # Determine winner
+                move1 = Gesture(challenger_move)
+                move2 = move
+
+                if move1 == move2:
+                    result = "Egalité !"
+                elif (
+                        (move1 == Gesture.PIERRE and move2 == Gesture.CISEAUX) or
+                        (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
+                        (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
+                ):
+                    result = f"<@{challenger_id}> gagne !"
+                else:
+                    result = f"<@{slack_params['user_id']}> gagne !"
+
+                delayed_response = {
+                    'response_type': 'in_channel',
+                    'text': f"Résultat du défi:\n<@{challenger_id}> a joué {move1.value}\n<@{slack_params['user_id']}> a joué {move2.value}\n{result}"
+                }
+            else:
+                # This is a new challenge
+                create_game(
+                    slack_params['channel_id'],
+                    slack_params['channel_name'],
+                    slack_params['user_id'],
+                    slack_params['user_name'],
+                    move.value,
+                    target_user,
+                    None  # We don't have the opponent's name yet
+                )
+                delayed_response = {
+                    'response_type': 'in_channel',
+                    'text': f"<@{slack_params['user_id']}> défie <@{target_user}> ! Pour accepter le défi, utilisez '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
+                }
+            
             requests.post(slack_params['response_url'], json=delayed_response)
             return
 
