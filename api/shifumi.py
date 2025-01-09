@@ -1,5 +1,5 @@
 import json
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import requests
 from urllib.parse import parse_qs
 import os
@@ -116,7 +116,7 @@ class handler(BaseHTTPRequestHandler):
                     'response_type': 'in_channel',
                     'text': f"{user_nickname} défie {target_nickname} ! Pour accepter le défi, utilise '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
                 }
-            
+
             requests.post(slack_params['response_url'], json=delayed_response)
             return
 
@@ -128,7 +128,10 @@ class handler(BaseHTTPRequestHandler):
                 'response_type': 'ephemeral',
                 'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
             }
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(bytes(str(response), 'utf-8'))
             return
 
         # Check for pending game
@@ -198,3 +201,9 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(b'')
 
         return
+
+
+if __name__ == '__main__':
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, handler)
+    httpd.serve_forever()
