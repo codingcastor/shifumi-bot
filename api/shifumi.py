@@ -47,7 +47,7 @@ class handler(BaseHTTPRequestHandler):
 
         # Parse the command text
         text_parts = slack_params['text'].upper().split()
-        
+
         # Check if it's a direct challenge
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
             # Direct challenge to specific user
@@ -61,7 +61,7 @@ class handler(BaseHTTPRequestHandler):
                 }
                 requests.post(slack_params['response_url'], json=delayed_response)
                 return
-                
+
             # Create game with specific opponent
             create_game(slack_params['channel_id'], slack_params['user_id'], move.value, challenged_user)
             delayed_response = {
@@ -70,7 +70,7 @@ class handler(BaseHTTPRequestHandler):
             }
             requests.post(slack_params['response_url'], json=delayed_response)
             return
-            
+
         # Regular game without specific opponent
         try:
             move = Gesture(text_parts[0])
@@ -89,14 +89,14 @@ class handler(BaseHTTPRequestHandler):
             game_id, player1_id, player1_move, _, _ = pending_game
 
             # Don't allow same player to play twice
-            # if player1_id == slack_params['user_id']:
-            #    delayed_response = {
-            #        'response_type': 'ephemeral',
-            #        'text': "You can't play against yourself! Wait for another player."
-            #    }
-            # else:
-            # Complete the game
-            update_game(game_id, slack_params['user_id'], move.value)
+            if player1_id == slack_params['user_id']:
+                delayed_response = {
+                    'response_type': 'ephemeral',
+                    'text': "You can't play against yourself! Wait for another player."
+                }
+            else:
+                # Complete the game
+                update_game(game_id, slack_params['user_id'], move.value)
 
             # Determine winner
             move1 = Gesture(player1_move)
