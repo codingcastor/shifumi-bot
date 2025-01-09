@@ -102,9 +102,9 @@ class handler(BaseHTTPRequestHandler):
                         (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
                         (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
                 ):
-                    result = f"<@{challenger_id}> gagne !"
+                    result = f"{get_nickname(challenger_id) or f'<@{challenger_id}>'} gagne !"
                 else:
-                    result = f"<@{slack_params['user_id']}> gagne !"
+                    result = f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} gagne !"
 
                 delayed_response = {
                     'response_type': 'in_channel',
