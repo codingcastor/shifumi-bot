@@ -46,15 +46,15 @@ def get_pending_game(channel_id):
     return game
 
 
-def create_game(channel_id, player_id, move):
-    """Create a new game with the first player's move"""
+def create_game(channel_id, player_id, move, opponent_id=None):
+    """Create a new game with the first player's move and optional opponent"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO games (channel_id, player1_id, player1_move)
-        VALUES (%s, %s, %s)
+        INSERT INTO games (channel_id, player1_id, player1_move, player2_id)
+        VALUES (%s, %s, %s, %s)
         RETURNING id
-    ''', (channel_id, player_id, move))
+    ''', (channel_id, player_id, move, opponent_id))
     game_id = cur.fetchone()[0]
     conn.commit()
     cur.close()

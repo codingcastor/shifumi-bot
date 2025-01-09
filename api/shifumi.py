@@ -45,9 +45,35 @@ class handler(BaseHTTPRequestHandler):
         # Initialize game table if needed
         init_game_table()
 
-        # Parse the move
+        # Parse the command text
+        text_parts = slack_params['text'].upper().split()
+        
+        # Check if it's a direct challenge
+        if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
+            # Direct challenge to specific user
+            challenged_user = text_parts[0][2:-1]  # Remove <@ and >
+            try:
+                move = Gesture(text_parts[1])
+            except ValueError:
+                delayed_response = {
+                    'response_type': 'ephemeral',
+                    'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
+                }
+                requests.post(slack_params['response_url'], json=delayed_response)
+                return
+                
+            # Create game with specific opponent
+            create_game(slack_params['channel_id'], slack_params['user_id'], move.value, challenged_user)
+            delayed_response = {
+                'response_type': 'in_channel',
+                'text': f"<@{slack_params['user_id']}> défie <@{challenged_user}> ! En attente de sa réponse..."
+            }
+            requests.post(slack_params['response_url'], json=delayed_response)
+            return
+            
+        # Regular game without specific opponent
         try:
-            move = Gesture(slack_params['text'].upper())
+            move = Gesture(text_parts[0])
         except ValueError:
             delayed_response = {
                 'response_type': 'ephemeral',
