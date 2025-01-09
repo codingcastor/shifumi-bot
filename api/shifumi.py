@@ -3,8 +3,8 @@ import requests
 from urllib.parse import parse_qs
 import os
 from lib.database import (
-    init_game_table, get_pending_game, create_game, update_game,
-    get_pending_challenge
+    init_tables, get_pending_game, create_game, update_game,
+    get_pending_challenge, get_nickname, set_nickname
 )
 from lib.slack import verify_slack_request
 from lib.types import Gesture
@@ -43,8 +43,25 @@ class handler(BaseHTTPRequestHandler):
             'api_app_id': params.get('api_app_id', [''])[0]
         }
 
-        # Initialize game table if needed
-        init_game_table()
+        # Initialize tables if needed
+        init_tables()
+
+        # Handle nickname command
+        if slack_params['text'].lower().startswith('nickname '):
+            nickname = slack_params['text'][9:].strip()  # Remove 'nickname ' prefix
+            if not nickname:
+                delayed_response = {
+                    'response_type': 'ephemeral',
+                    'text': "Please provide a nickname. Usage: /shifumi nickname <your-nickname>"
+                }
+            else:
+                set_nickname(slack_params['user_id'], nickname)
+                delayed_response = {
+                    'response_type': 'ephemeral',
+                    'text': f"Your nickname has been set to: {nickname}"
+                }
+            requests.post(slack_params['response_url'], json=delayed_response)
+            return
 
         # Parse the command text
         text_parts = slack_params['text'].upper().split()
@@ -106,7 +123,7 @@ class handler(BaseHTTPRequestHandler):
                 )
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"<@{slack_params['user_id']}> défie <@{target_user}> ! Pour accepter le défi, utilisez '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
+                    'text': f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} défie {get_nickname(target_user) or f'<@{target_user}>'} ! Pour accepter le défi, utilisez '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
                 }
             
             requests.post(slack_params['response_url'], json=delayed_response)
@@ -156,7 +173,7 @@ class handler(BaseHTTPRequestHandler):
 
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"Résultat:\n<@{player1_id}> a joué {move1.value}\n<@{slack_params['user_id']}> a joué {move2.value}\n{result}"
+                'text': f"Résultat:\n{get_nickname(player1_id) or f'<@{player1_id}>'} a joué {move1.value}\n{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} a joué {move2.value}\n{result}"
             }
         else:
             # Start new game
@@ -169,7 +186,7 @@ class handler(BaseHTTPRequestHandler):
             )
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"<@{slack_params['user_id']}> a joué. En attente d'un adversaire..."
+                'text': f"{get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'} a joué. En attente d'un adversaire..."
             }
         requests.post(
             slack_params['response_url'],

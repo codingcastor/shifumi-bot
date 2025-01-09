@@ -9,10 +9,19 @@ def get_db_connection():
     return psycopg2.connect(os.getenv('DATABASE_URL'))
 
 
-def init_game_table():
-    """Create the games table if it doesn't exist"""
+def init_tables():
+    """Create the games and nicknames tables if they don't exist"""
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS nicknames (
+            user_id TEXT PRIMARY KEY,
+            nickname TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     cur.execute('''
         CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
@@ -100,3 +109,26 @@ def get_pending_challenge(channel_id, challenger_id, opponent_id):
     cur.close()
     conn.close()
     return game
+def get_nickname(user_id):
+    """Get a user's nickname if it exists"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT nickname FROM nicknames WHERE user_id = %s', (user_id,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    return result[0] if result else None
+
+def set_nickname(user_id, nickname):
+    """Set or update a user's nickname"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO nicknames (user_id, nickname)
+        VALUES (%s, %s)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET nickname = EXCLUDED.nickname, updated_at = CURRENT_TIMESTAMP
+    ''', (user_id, nickname))
+    conn.commit()
+    cur.close()
+    conn.close()
