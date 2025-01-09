@@ -1,5 +1,5 @@
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 import requests
 from urllib.parse import parse_qs
 import os
@@ -201,9 +201,3 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(b'')
 
         return
-
-
-if __name__ == '__main__':
-    server_address = ('', 8000)
-    httpd = HTTPServer(server_address, handler)
-    httpd.serve_forever()
