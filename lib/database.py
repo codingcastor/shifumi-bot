@@ -43,7 +43,6 @@ def get_pending_game(channel_id):
         WHERE channel_id = %s 
         AND player2_id IS NULL 
         AND status = 'pending'
-        AND player2_id IS NULL
         ORDER BY created_at DESC 
         LIMIT 1
     ''', (channel_id,))
