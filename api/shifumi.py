@@ -96,7 +96,7 @@ class handler(BaseHTTPRequestHandler):
             create_game(slack_params['channel_id'], slack_params['user_id'], move.value)
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"<@{slack_params['user_id']}> a joué {move.value}. En attente d'un adversaire !"
+                'text': f"<@{slack_params['user_id']}> a joué. En attente d'un adversaire..."
             }
         requests.post(
             slack_params['response_url'],
