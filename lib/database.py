@@ -164,6 +164,107 @@ def get_pending_challenges():
         for row in results
     ]
 
+def get_user_stats(user_id):
+    """Get detailed stats for a specific user"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Get overall stats
+    cur.execute('''
+        WITH game_results AS (
+            -- First player wins
+            SELECT 
+                player1_id as winner_id,
+                player2_id as loser_id,
+                created_at
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND (
+                    (player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                    (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                    (player1_move = 'SCISSORS' AND player2_move = 'PAPER')
+                )
+            UNION ALL
+            -- Second player wins
+            SELECT 
+                player2_id as winner_id,
+                player1_id as loser_id,
+                created_at
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND (
+                    (player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                    (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                    (player2_move = 'SCISSORS' AND player1_move = 'PAPER')
+                )
+        ),
+        nemesis AS (
+            SELECT 
+                winner_id as opponent_id,
+                COUNT(*) as wins
+            FROM game_results
+            WHERE loser_id = %s
+            GROUP BY winner_id
+            ORDER BY wins DESC
+            LIMIT 1
+        ),
+        best_against AS (
+            SELECT 
+                loser_id as opponent_id,
+                COUNT(*) as wins
+            FROM game_results
+            WHERE winner_id = %s
+            GROUP BY loser_id
+            ORDER BY wins DESC
+            LIMIT 1
+        ),
+        user_stats AS (
+            SELECT 
+                COUNT(CASE WHEN winner_id = %s THEN 1 END) as wins,
+                COUNT(CASE WHEN loser_id = %s THEN 1 END) as losses,
+                COUNT(*) as total_games
+            FROM game_results
+            WHERE winner_id = %s OR loser_id = %s
+        )
+        SELECT 
+            s.wins, s.losses, s.total_games,
+            n.opponent_id as nemesis_id, n.wins as nemesis_wins,
+            b.opponent_id as best_against_id, b.wins as best_against_wins
+        FROM user_stats s
+        LEFT JOIN nemesis n ON true
+        LEFT JOIN best_against b ON true
+    ''', (user_id, user_id, user_id, user_id, user_id, user_id))
+    
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if not result:
+        return None
+        
+    wins, losses, total_games = result[0:3]
+    nemesis_id, nemesis_wins = result[3:5]
+    best_against_id, best_against_wins = result[5:7]
+    
+    win_rate = round(wins / total_games * 100, 1) if total_games > 0 else 0
+    
+    return {
+        'wins': wins,
+        'losses': losses,
+        'total_games': total_games,
+        'win_rate': win_rate,
+        'nemesis': {
+            'user_id': nemesis_id,
+            'wins': nemesis_wins
+        } if nemesis_id else None,
+        'best_against': {
+            'user_id': best_against_id,
+            'wins': best_against_wins
+        } if best_against_id else None
+    }
+
 def get_leaderboard():
     """Get the leaderboard for the current year"""
     conn = get_db_connection()
