@@ -54,7 +54,7 @@ class handler(BaseHTTPRequestHandler):
 
         # Check if it's a direct challenge or challenge response
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
-            target_user = text_parts[0][2:-1]  # Remove <@ and >
+            target_user = text_parts[0][2:-1].split('|')[0]  # Remove <@ and >
             try:
                 move = Gesture(text_parts[1])
             except ValueError:
