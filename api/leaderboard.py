@@ -2,7 +2,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
-from lib.database import init_tables
+from lib.database import init_tables, get_leaderboard, get_nickname
 from lib.slack import verify_slack_request
 
 
@@ -35,14 +35,38 @@ class handler(BaseHTTPRequestHandler):
         # Initialize tables if needed
         init_tables()
 
-        # Send temporary response
+        # Get leaderboard data
+        leaderboard = get_leaderboard()
+        
+        # Format leaderboard for display
+        if not leaderboard:
+            text = "Aucune partie jouée cette année ! 😢"
+        else:
+            lines = ["🏆 *Classement de l'année* 🏆\n"]
+            
+            for i, player in enumerate(leaderboard, 1):
+                # Get player nickname or fallback to mention
+                player_name = get_nickname(player['player_id']) or f"<@{player['player_id']}>"
+                
+                # Add medal for top 3
+                medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+                
+                lines.append(
+                    f"{medal} {player_name} - "
+                    f"{player['wins']}W/{player['losses']}L "
+                    f"({player['win_rate']}% sur {player['total_games']} parties)"
+                )
+            
+            text = "\n".join(lines)
+
+        # Send response
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
         
         response = {
             'response_type': 'in_channel',
-            'text': "🏆 Le leaderboard arrive... 🏆"
+            'text': text
         }
         
         self.wfile.write(json.dumps(response).encode('utf-8'))
