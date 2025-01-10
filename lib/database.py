@@ -135,6 +135,35 @@ def set_nickname(user_id, nickname):
     conn.close()
 
 
+def get_pending_challenges():
+    """Get all pending challenges"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT 
+            channel_id,
+            player1_id,
+            player2_id,
+            created_at
+        FROM games 
+        WHERE status = 'pending'
+        AND player2_id IS NOT NULL
+        AND player2_move IS NULL
+        ORDER BY created_at DESC
+    ''')
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [
+        {
+            'channel_id': row[0],
+            'challenger_id': row[1],
+            'opponent_id': row[2],
+            'created_at': row[3]
+        }
+        for row in results
+    ]
+
 def get_leaderboard():
     """Get the leaderboard for the current year"""
     conn = get_db_connection()
