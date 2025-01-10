@@ -56,7 +56,7 @@ class handler(BaseHTTPRequestHandler):
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
             target_user = text_parts[0][2:-1].split('|')[0]  # Remove <@ and >
             try:
-                move = Gesture.from_input(text_parts[1])
+                move = Gesture.from_input(text_parts[1].upper())
             except ValueError:
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -88,9 +88,9 @@ class handler(BaseHTTPRequestHandler):
                 if move1 == move2:
                     result = "Egalité !"
                 elif (
-                        (move1 == Gesture.PIERRE and move2 == Gesture.CISEAUX) or
-                        (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
-                        (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
+                        (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
+                        (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
+                        (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
                 ):
                     result = f"{challenger_nickname} gagne !"
                 else:
