@@ -118,6 +118,10 @@ class handler(BaseHTTPRequestHandler):
                 }
 
             requests.post(slack_params['response_url'], json=delayed_response)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'')
             return
 
         # Regular game without specific opponent
