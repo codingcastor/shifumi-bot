@@ -42,7 +42,7 @@ class handler(BaseHTTPRequestHandler):
         
         response = {
             'response_type': 'in_channel',
-            'text': "🏆 Leaderboard coming soon! 🏆"
+            'text': "🏆 Le leaderboard arrive... 🏆"
         }
         
         self.wfile.write(json.dumps(response).encode('utf-8'))

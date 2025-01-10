@@ -1,7 +1,5 @@
 import os
 import psycopg2
-from datetime import datetime
-from lib.types import Gesture
 
 
 def get_db_connection():
@@ -21,7 +19,7 @@ def init_tables():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+
     cur.execute('''
         CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
@@ -90,6 +88,7 @@ def update_game(game_id, player2_id, player2_name, move):
     cur.close()
     conn.close()
 
+
 def get_pending_challenge(channel_id, challenger_id, opponent_id):
     """Get a pending challenge between two specific players"""
     conn = get_db_connection()
@@ -109,6 +108,8 @@ def get_pending_challenge(channel_id, challenger_id, opponent_id):
     cur.close()
     conn.close()
     return game
+
+
 def get_nickname(user_id):
     """Get a user's nickname if it exists"""
     conn = get_db_connection()
@@ -118,6 +119,7 @@ def get_nickname(user_id):
     cur.close()
     conn.close()
     return result[0] if result else None
+
 
 def set_nickname(user_id, nickname):
     """Set or update a user's nickname"""
@@ -132,3 +134,84 @@ def set_nickname(user_id, nickname):
     conn.commit()
     cur.close()
     conn.close()
+
+
+def get_leaderboard():
+    """Get the leaderboard for the current year"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+        WITH game_results AS (
+            -- First player wins
+            SELECT 
+                player1_id as winner_id,
+                player2_id as loser_id
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND (
+                    (player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                    (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                    (player1_move = 'SCISSORS' AND player2_move = 'PAPER')
+                )
+            UNION ALL
+            -- Second player wins
+            SELECT 
+                player2_id as winner_id,
+                player1_id as loser_id
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND (
+                    (player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                    (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                    (player2_move = 'SCISSORS' AND player1_move = 'PAPER')
+                )
+        ),
+        player_stats AS (
+            SELECT 
+                p.player_id,
+                p.wins,
+                p.losses,
+                p.total_games,
+                ROUND(CAST(CAST(p.wins AS FLOAT) / NULLIF(p.total_games, 0) * 100 AS numeric), 1) as win_rate
+            FROM (
+                SELECT 
+                    player_id,
+                    COUNT(CASE WHEN is_win THEN 1 END) as wins,
+                    COUNT(CASE WHEN NOT is_win THEN 1 END) as losses,
+                    COUNT(*) as total_games
+                FROM (
+                    SELECT winner_id as player_id, TRUE as is_win FROM game_results
+                    UNION ALL
+                    SELECT loser_id as player_id, FALSE as is_win FROM game_results
+                ) all_results
+                GROUP BY player_id
+            ) p
+            WHERE p.total_games > 0
+        )
+        SELECT 
+            player_id,
+            wins,
+            losses,
+            total_games,
+            win_rate
+        FROM player_stats
+        ORDER BY  win_rate DESC, wins DESC,total_games DESC
+    ''')
+
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return [
+        {
+            'player_id': row[0],
+            'wins': row[1],
+            'losses': row[2],
+            'total_games': row[3],
+            'win_rate': row[4]
+        }
+        for row in results
+    ]
