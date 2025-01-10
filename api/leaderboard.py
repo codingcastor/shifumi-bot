@@ -2,7 +2,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
-from lib.database import init_tables, get_leaderboard, get_nickname
+from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
 from lib.slack import verify_slack_request
 
 
