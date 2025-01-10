@@ -41,24 +41,24 @@ class handler(BaseHTTPRequestHandler):
         if text.startswith('<@') and text.endswith('>'):
             # Extract user ID from mention
             target_user_id = text[2:-1].split('|')[0]
-            
+
             # Get user stats
             stats = get_user_stats(target_user_id)
-            
+
             if not stats or stats['total_games'] == 0:
                 text = f"<@{target_user_id}> n'a pas encore joué cette année ! 😢"
             else:
                 # Get user nickname or fallback to mention
                 user_name = get_nickname(target_user_id) or f"<@{target_user_id}>"
-                
+
                 lines = [f"📊 *Statistiques de {user_name}* 📊\n"]
-                
+
                 # Overall stats
                 lines.append(
                     f"• Bilan: {stats['wins']}W/{stats['losses']}L "
                     f"({stats['win_rate']}% sur {stats['total_games']} parties)"
                 )
-                
+
                 # Nemesis info
                 if stats['nemesis']:
                     nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
@@ -66,50 +66,51 @@ class handler(BaseHTTPRequestHandler):
                         f"• Némésis: {nemesis_name} "
                         f"({stats['nemesis']['wins']} victoires)"
                     )
-                
+
                 # Best against info
                 if stats['best_against']:
-                    best_against_name = get_nickname(stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
+                    best_against_name = get_nickname(
+                        stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
                     lines.append(
                         f"• Meilleur contre: {best_against_name} "
                         f"({stats['best_against']['wins']} victoires)"
                     )
-                
+
                 text = "\n".join(lines)
         else:
             # Get leaderboard data
             leaderboard = get_leaderboard()
-        
-        # Format leaderboard for display
-        if not leaderboard:
-            text = "Aucune partie jouée cette année ! 😢"
-        else:
-            lines = ["🏆 *Classement de l'année* 🏆\n"]
-            
-            for i, player in enumerate(leaderboard, 1):
-                # Get player nickname or fallback to mention
-                player_name = get_nickname(player['player_id']) or f"<@{player['player_id']}>"
-                
-                # Add medal for top 3
-                medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
-                
-                lines.append(
-                    f"{medal} {player_name} - "
-                    f"{player['wins']}W/{player['losses']}L "
-                    f"({player['win_rate']}% sur {player['total_games']} parties)"
-                )
-            
-            text = "\n".join(lines)
+
+            # Format leaderboard for display
+            if not leaderboard:
+                text = "Aucune partie jouée cette année ! 😢"
+            else:
+                lines = ["🏆 *Classement de l'année* 🏆\n"]
+
+                for i, player in enumerate(leaderboard, 1):
+                    # Get player nickname or fallback to mention
+                    player_name = get_nickname(player['player_id']) or f"<@{player['player_id']}>"
+
+                    # Add medal for top 3
+                    medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+
+                    lines.append(
+                        f"{medal} {player_name} - "
+                        f"{player['wins']}W/{player['losses']}L "
+                        f"({player['win_rate']}% sur {player['total_games']} parties)"
+                    )
+
+                text = "\n".join(lines)
 
         # Send response
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        
+
         response = {
             'response_type': 'in_channel',
             'text': text
         }
-        
+
         self.wfile.write(json.dumps(response).encode('utf-8'))
         return
