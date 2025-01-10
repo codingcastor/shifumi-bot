@@ -53,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
         user_nickname = get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'
 
         # Check if it's a direct challenge or challenge response
-        if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
+        if len(text_parts) == 2 and text_parts[0].startswith('<@'):
             target_user = text_parts[0][2:-1].split('|')[0]  # Remove <@ and >
             try:
                 move = Gesture.from_input(text_parts[1].upper())
