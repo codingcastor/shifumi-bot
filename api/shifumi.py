@@ -56,14 +56,14 @@ class handler(BaseHTTPRequestHandler):
         if len(text_parts) == 2 and text_parts[0].startswith('<@') and text_parts[0].endswith('>'):
             target_user = text_parts[0][2:-1].split('|')[0]  # Remove <@ and >
             try:
-                move = Gesture(text_parts[1])
+                move = Gesture.from_input(text_parts[1])
             except ValueError:
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 response = {
                     'response_type': 'ephemeral',
-                    'text': f"Geste invalide ! Valeurs possibles : :caillou:, :feuilles:, :ciseaux:"
+                    'text': f"Geste invalide ! Valeurs possibles : :rock:, :leaves:, :scissors: (ou PIERRE, FEUILLE, CISEAUX)"
                 }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
@@ -98,7 +98,7 @@ class handler(BaseHTTPRequestHandler):
 
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.value}\n{user_nickname} a joué {move2.value}\n{result}"
+                    'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}"
                 }
             else:
                 # This is a new challenge
@@ -122,11 +122,11 @@ class handler(BaseHTTPRequestHandler):
 
         # Regular game without specific opponent
         try:
-            move = Gesture(text_parts[0])
+            move = Gesture.from_input(text_parts[0])
         except ValueError:
             response = {
                 'response_type': 'ephemeral',
-                'text': f"Geste invalide ! Valeurs possibles : {', '.join([g.value for g in Gesture])}"
+                'text': f"Geste invalide ! Valeurs possibles : :rock:, :leaves:, :scissors: (ou PIERRE, FEUILLE, CISEAUX)"
             }
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -174,7 +174,7 @@ class handler(BaseHTTPRequestHandler):
 
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"Résultat:\n{player1_nickname} a joué {move1.value}\n{user_nickname} a joué {move2.value}\n{result}"
+                'text': f"Résultat:\n{player1_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}"
             }
         else:
             # Start new game
