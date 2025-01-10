@@ -1,14 +1,12 @@
 import json
-from http.server import BaseHTTPRequestHandler
-import requests
-from urllib.parse import parse_qs
 import os
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs
+
 from lib.database import (
-    init_tables, get_pending_game, create_game, update_game,
-    get_pending_challenge, get_nickname, set_nickname
+    init_tables, set_nickname
 )
 from lib.slack import verify_slack_request
-from lib.types import Gesture
 
 
 class handler(BaseHTTPRequestHandler):

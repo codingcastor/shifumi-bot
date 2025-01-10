@@ -70,7 +70,6 @@ class handler(BaseHTTPRequestHandler):
 
             # Check if this is a response to a challenge
             pending_challenge = get_pending_challenge(
-                slack_params['channel_id'],
                 target_user,  # The challenger
                 slack_params['user_id']  # The current player
             )

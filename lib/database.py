@@ -89,21 +89,20 @@ def update_game(game_id, player2_id, player2_name, move):
     conn.close()
 
 
-def get_pending_challenge(channel_id, challenger_id, opponent_id):
+def get_pending_challenge(challenger_id, opponent_id):
     """Get a pending challenge between two specific players"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
         SELECT id, player1_id, player1_move
         FROM games 
-        WHERE channel_id = %s 
-        AND player1_id = %s
+        WHERE player1_id = %s
         AND player2_id = %s
         AND player2_move IS NULL
         AND status = 'pending'
         ORDER BY created_at DESC 
         LIMIT 1
-    ''', (channel_id, challenger_id, opponent_id))
+    ''', (challenger_id, opponent_id))
     game = cur.fetchone()
     cur.close()
     conn.close()
