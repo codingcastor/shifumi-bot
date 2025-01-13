@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from http.server import BaseHTTPRequestHandler
@@ -180,11 +179,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps({
-                'response_type': 'in_channel',
-                'blocks': blocks if not text else None,
-                'text': text if text else None
-            }).encode('utf-8'))
+        self.wfile.write(b'')
 
         # Send delayed response with leaderboard
         requests.post(
