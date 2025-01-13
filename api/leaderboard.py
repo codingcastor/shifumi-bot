@@ -246,7 +246,7 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
         
         for player in unranked:
             nickname = get_nickname(player['player_id'])
-            player_name = f"{nickname} (@{player['player_name']})" if nickname else f"<@{player['player_id']}>"
+            player_name = f"{nickname} ({player['player_name']})" if nickname else f"<@{player['player_id']}>"
             blocks.append({
                 "type": "section",
                 "text": {
