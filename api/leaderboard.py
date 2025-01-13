@@ -2,6 +2,7 @@ import json
 import logging
 from http.server import BaseHTTPRequestHandler
 import os
+import requests
 from urllib.parse import parse_qs
 from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
 from lib.slack import verify_slack_request
@@ -112,15 +113,18 @@ class handler(BaseHTTPRequestHandler):
 
                 text = "\n".join(lines)
 
-        # Send response
+        # Send immediate empty response
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
+        self.wfile.write(b'')
 
-        response = {
-            'response_type': 'in_channel',
-            'text': text
-        }
-
-        self.wfile.write(json.dumps(response).encode('utf-8'))
+        # Send delayed response with leaderboard
+        requests.post(
+            slack_params['response_url'],
+            json={
+                'response_type': 'in_channel',
+                'text': text
+            }
+        )
         return
