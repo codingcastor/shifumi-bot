@@ -88,14 +88,15 @@ class handler(BaseHTTPRequestHandler):
 
                 text = "\n".join(lines)
         else:
-            # Get leaderboard data
+            # Get leaderboard and unranked data
             leaderboard = get_leaderboard()
+            unranked = get_unranked_players()
 
-            # Format leaderboard for display
-            if not leaderboard:
-                text = "Aucune partie jouée cette année ! 😢"
-            else:
-                lines = ["🏆 *Classement de l'année* 🏆\n"]
+            lines = []
+            
+            # Format ranked players
+            if leaderboard:
+                lines.append("🏆 *Classement de l'année* 🏆\n")
 
                 for i, player in enumerate(leaderboard, 1):
                     # Get player nickname and username
@@ -111,7 +112,21 @@ class handler(BaseHTTPRequestHandler):
                         f"({player['win_rate']}% sur {player['total_games']} parties)"
                     )
 
-                text = "\n".join(lines)
+            # Format unranked players
+            if unranked:
+                if lines:  # Add spacing if there were ranked players
+                    lines.append("")
+                lines.append("👥 *Joueurs non classés* 👥")
+                for player in unranked:
+                    nickname = get_nickname(player['player_id'])
+                    player_name = f"{nickname} (@{player['player_name']})" if nickname else f"<@{player['player_id']}>"
+                    lines.append(
+                        f"• {player_name} - "
+                        f"{player['games_played']}/5 parties jouées "
+                        f"(encore {player['games_needed']} parties)"
+                    )
+
+            text = "\n".join(lines) if lines else "Aucune partie jouée cette année ! 😢"
 
         # Send immediate empty response
         self.send_response(200)

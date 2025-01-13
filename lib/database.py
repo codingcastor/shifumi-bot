@@ -283,6 +283,55 @@ def get_user_stats(user_id):
         } if best_against_id else None
     }
 
+def get_unranked_players():
+    """Get players who haven't played enough games to be ranked"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+        WITH game_results AS (
+            -- First player participation
+            SELECT 
+                player1_id as player_id,
+                player1_name as player_name
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            UNION ALL
+            -- Second player participation
+            SELECT 
+                player2_id as player_id,
+                player2_name as player_name
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player2_id IS NOT NULL
+        )
+        SELECT 
+            player_id,
+            MAX(player_name) as player_name,
+            COUNT(*) as games_played,
+            5 - COUNT(*) as games_needed
+        FROM game_results
+        GROUP BY player_id
+        HAVING COUNT(*) < 5
+        ORDER BY COUNT(*) DESC, MAX(player_name)
+    ''')
+
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return [
+        {
+            'player_id': row[0],
+            'player_name': row[1],
+            'games_played': row[2],
+            'games_needed': row[3]
+        }
+        for row in results
+    ]
+
 def get_leaderboard():
     """Get the leaderboard for the current year"""
     conn = get_db_connection()
