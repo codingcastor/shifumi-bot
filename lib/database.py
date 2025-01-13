@@ -1,5 +1,9 @@
 import os
+from typing import Dict, Optional
 import psycopg2
+
+# In-memory cache for nicknames
+_nickname_cache: Dict[str, Optional[str]] = {}
 
 
 def get_db_connection():
@@ -114,13 +118,22 @@ def get_pending_challenge(challenger_id, opponent_id):
 
 def get_nickname(user_id):
     """Get a user's nickname if it exists"""
+    # Check cache first
+    if user_id in _nickname_cache:
+        return _nickname_cache[user_id]
+        
+    # Cache miss - query database
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('SELECT nickname FROM nicknames WHERE user_id = %s', (user_id,))
     result = cur.fetchone()
     cur.close()
     conn.close()
-    return result[0] if result else None
+    
+    # Update cache and return
+    nickname = result[0] if result else None
+    _nickname_cache[user_id] = nickname
+    return nickname
 
 
 def set_nickname(user_id, nickname, user_name):
