@@ -97,13 +97,15 @@ def get_pending_challenge(challenger_id, opponent_id):
     cur.execute('''
         SELECT id, player1_id, player1_move
         FROM games 
-        WHERE player1_id = %s
-        AND player2_id = %s
+        WHERE (
+            (player1_id = %s AND player2_id = %s) OR
+            (player1_id = %s AND player2_id = %s)
+        )
         AND player2_move IS NULL
         AND status = 'pending'
         ORDER BY created_at DESC 
         LIMIT 1
-    ''', (challenger_id, opponent_id))
+    ''', (challenger_id, opponent_id, opponent_id, challenger_id))
     game = cur.fetchone()
     cur.close()
     conn.close()

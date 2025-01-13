@@ -68,13 +68,24 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
 
-            # Check if this is a response to a challenge
+            # Check if this is a response to a challenge or if there's already a challenge
             pending_challenge = get_pending_challenge(
                 target_user,  # The challenger
                 slack_params['user_id']  # The current player
             )
 
-            if pending_challenge:
+            if pending_challenge and pending_challenge[0] == target_user:
+                # There's already a pending challenge from this user
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
+                    'response_type': 'ephemeral',
+                    'text': f"Tu as déjà un défi en cours avec cette personne !"
+                }
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
+            elif pending_challenge:
                 # This is a response to a challenge
                 game_id, challenger_id, challenger_move = pending_challenge
                 challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
