@@ -1,5 +1,5 @@
 import json
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import os
 from urllib.parse import parse_qs
 from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
@@ -38,10 +38,11 @@ class handler(BaseHTTPRequestHandler):
 
         # Check if a user was specified
         text = slack_params['text'].strip()
+        print(text)
         if text and text.startswith('<@'):
             # Extract user ID from mention
             target_user_id = text[2:-1].split('|')[0]
-
+            print(target_user_id)
             # Get user stats
             stats = get_user_stats(target_user_id)
 
@@ -115,3 +116,7 @@ class handler(BaseHTTPRequestHandler):
 
         self.wfile.write(json.dumps(response).encode('utf-8'))
         return
+
+if __name__ == '__main__':
+    server = HTTPServer(('localhost', 8080), handler)
+    server.serve_forever()
