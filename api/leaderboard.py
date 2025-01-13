@@ -1,8 +1,7 @@
 import json
 import logging
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import List, Dict
+from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs
 
 import requests
@@ -80,23 +79,23 @@ class handler(BaseHTTPRequestHandler):
                             "fields": [
                                 {
                                     "type": "mrkdwn",
-                                    "text": "*Victoires*\n" + f"`{stats['wins']}`"
+                                    "text": "*Victoires* " + f"`{stats['wins']}`"
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": "*Défaites*\n" + f"`{stats['losses']}`"
+                                    "text": "*Défaites* " + f"`{stats['losses']}`"
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": "*Egalités*\n" + f"`{stats['draws']}`"
+                                    "text": "*Egalités* " + f"`{stats['draws']}`"
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": "*Total parties*\n" + f"`{stats['total_games']}`"
+                                    "text": "*Total parties* " + f"`{stats['total_games']}`"
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": "*Taux de victoire*\n" + f"`{stats['win_rate']}%`"
+                                    "text": "*Taux de victoire* " + f"`{stats['win_rate']}%`"
                                 }
                             ]
                         }
@@ -107,19 +106,19 @@ class handler(BaseHTTPRequestHandler):
 
                     if stats['nemesis']:
                         nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
-                        relationships.append(f"☠️ *Némésis*: {nemesis_name} ({stats['nemesis']['wins']} victoires)")
+                        relationships.append(f"☠️ *Némésis*: {nemesis_name} ({stats['nemesis']['user_name']}) ({stats['nemesis']['wins']} victoires)")
 
                     if stats['best_against']:
                         best_against_name = get_nickname(
                             stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
                         relationships.append(
-                            f"💪 *Meilleur contre*: {best_against_name} ({stats['best_against']['wins']} victoires)")
+                            f"💪 *Meilleur contre*: {best_against_name} ({stats['best_against']['user_name']}) ({stats['best_against']['wins']} victoires)")
 
                     if stats['most_draws']:
                         most_draws_name = get_nickname(
                             stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
                         relationships.append(
-                            f"🤝 *Égalités avec*: {most_draws_name} ({stats['most_draws']['draws']} égalités)")
+                            f"🤝 *Égalités avec*: {most_draws_name} ({stats['most_draws']['user_name']}) ({stats['most_draws']['draws']} égalités)")
 
                     if relationships:
                         blocks.append({"type": "divider"})
@@ -176,8 +175,7 @@ class handler(BaseHTTPRequestHandler):
                     blocks = None
                 else:
                     text = "\n".join(lines)
-                    # Fallback text not needed with blocks
-                    #blocks = format_leaderboard_blocks(leaderboard, unranked)
+                    blocks = None
 
             response_message = {
                 'response_type': 'in_channel',
@@ -213,73 +211,3 @@ class handler(BaseHTTPRequestHandler):
 
         return
 
-
-def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
-    """Format leaderboard data as Slack blocks"""
-    blocks = [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "🏆 Classement de l'année 🏆",
-                "emoji": True
-            }
-        },
-        {
-            "type": "divider"
-        }
-    ]
-
-    if leaderboard:
-        fields = []
-        for i, player in enumerate(leaderboard, 1):
-            nickname = get_nickname(player['player_id'])
-            player_name = f"{nickname} ({player['user_name']})" if nickname else f"<@{player['player_id']}>"
-            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, '')
-
-            fields.extend([
-                {
-                    "type": "mrkdwn",
-                    "text": f"{i}. *{player_name}* {medal}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": f"W/D/L: `{player['wins']}/{player['draws']}/{player['losses']}` • {player['win_rate']}%"
-                }
-            ])
-
-        blocks.append({
-            "type": "section",
-            "fields": fields
-        })
-    if unranked:
-        blocks.extend([
-            {
-                "type": "divider"
-            },
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "👥 Joueurs non classés",
-                    "emoji": True
-                }
-            }
-        ])
-
-        for player in unranked:
-            nickname = get_nickname(player['player_id'])
-            player_name = f"{nickname} ({player['player_name']})" if nickname else f"<@{player['player_id']}>"
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"{player_name} - `{player['games_played']}/5` parties jouées (encore {player['games_needed']} parties)"
-                }
-            })
-
-    return blocks
-
-if __name__ == '__main__':
-    server = HTTPServer(('localhost', 8080), handler)
-    server.serve_forever()
