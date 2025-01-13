@@ -52,7 +52,7 @@ class handler(BaseHTTPRequestHandler):
 
         user_nickname = get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'
 
-        # Check if it's a direct challenge or challenge response
+        # Check if it's a direct challenge
         if len(text_parts) == 2 and text_parts[0].startswith('<@'):
             target_user = text_parts[0][2:-1].split('|')[0]  # Remove <@ and >
             try:
@@ -167,61 +167,61 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(str(response), 'utf-8'))
             return
             # Start new game
-            create_game(
-                slack_params['channel_id'],
-                slack_params['channel_name'],
-                slack_params['user_id'],
-                slack_params['user_name'],
-                move.value
-            )
-            delayed_response = {
-                'response_type': 'in_channel',
-                'text': f"{user_nickname} a joué. En attente d'un adversaire...",
-                'blocks': [
-                    {
-                        'type': 'section',
-                        'text': {
-                            'type': 'mrkdwn',
-                            'text': f"{user_nickname} a joué. En attente d'un adversaire..."
-                        }
-                    },
-                    {
-                        'type': 'actions',
-                        'elements': [
-                            {
-                                'type': 'button',
-                                'text': {
-                                    'type': 'plain_text',
-                                    'text': '🪨 Pierre',
-                                    'emoji': True
-                                },
-                                'value': 'PIERRE',
-                                'action_id': 'play_rock'
-                            },
-                            {
-                                'type': 'button',
-                                'text': {
-                                    'type': 'plain_text',
-                                    'text': '🍃 Feuille',
-                                    'emoji': True
-                                },
-                                'value': 'FEUILLE',
-                                'action_id': 'play_paper'
-                            },
-                            {
-                                'type': 'button',
-                                'text': {
-                                    'type': 'plain_text',
-                                    'text': '✂️ Ciseaux',
-                                    'emoji': True
-                                },
-                                'value': 'CISEAUX',
-                                'action_id': 'play_scissors'
-                            }
-                        ]
+        create_game(
+            slack_params['channel_id'],
+            slack_params['channel_name'],
+            slack_params['user_id'],
+            slack_params['user_name'],
+            move.value
+        )
+        delayed_response = {
+            'response_type': 'in_channel',
+            'text': f"{user_nickname} a joué. En attente d'un adversaire...",
+            'blocks': [
+                {
+                    'type': 'section',
+                    'text': {
+                        'type': 'mrkdwn',
+                        'text': f"{user_nickname} a joué. En attente d'un adversaire..."
                     }
-                ]
-            }
+                },
+                {
+                    'type': 'actions',
+                    'elements': [
+                        {
+                            'type': 'button',
+                            'text': {
+                                'type': 'plain_text',
+                                'text': '🪨 Pierre',
+                                'emoji': True
+                            },
+                            'value': 'PIERRE',
+                            'action_id': 'play_rock'
+                        },
+                        {
+                            'type': 'button',
+                            'text': {
+                                'type': 'plain_text',
+                                'text': '🍃 Feuille',
+                                'emoji': True
+                            },
+                            'value': 'FEUILLE',
+                            'action_id': 'play_paper'
+                        },
+                        {
+                            'type': 'button',
+                            'text': {
+                                'type': 'plain_text',
+                                'text': '✂️ Ciseaux',
+                                'emoji': True
+                            },
+                            'value': 'CISEAUX',
+                            'action_id': 'play_scissors'
+                        }
+                    ]
+                }
+            ]
+        }
         requests.post(
             slack_params['response_url'],
             json=delayed_response
