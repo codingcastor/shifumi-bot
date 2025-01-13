@@ -1,8 +1,16 @@
 import json
+import logging
 from http.server import BaseHTTPRequestHandler
 import requests
 from urllib.parse import parse_qs
 import os
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('shifumi.game')
 from lib.database import (
     init_tables, get_pending_game, create_game, update_game,
     get_pending_challenge, get_nickname, set_nickname
@@ -49,8 +57,10 @@ class handler(BaseHTTPRequestHandler):
 
         # Parse the command text
         text_parts = slack_params['text'].split()
+        logger.info(f"Game request from user {slack_params['user_id']}")
 
         user_nickname = get_nickname(slack_params['user_id']) or f'<@{slack_params['user_id']}>'
+        logger.info(f"User nickname resolved to: {user_nickname}")
 
         # Check if it's a direct challenge
         if len(text_parts) == 2 and text_parts[0].startswith('<@'):
@@ -68,11 +78,13 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
 
+            logger.info(f"Challenge request from {slack_params['user_id']} to {target_user}")
             # Check if there's already a challenge
             pending_challenge = get_pending_challenge(
                 target_user,  # The challenger
                 slack_params['user_id']  # The current player
             )
+            logger.info(f"Pending challenge check result: {pending_challenge is not None}")
 
             if pending_challenge and pending_challenge[0] == target_user:
                 # There's already a pending challenge from this user
@@ -87,6 +99,7 @@ class handler(BaseHTTPRequestHandler):
                 return
             else:
                 # This is a new challenge
+                logger.info(f"Creating new challenge game with move {move.value}")
                 create_game(
                     slack_params['channel_id'],
                     slack_params['channel_name'],

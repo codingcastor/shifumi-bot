@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs
@@ -7,6 +8,13 @@ from lib.database import (
     init_tables, set_nickname
 )
 from lib.slack import verify_slack_request
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('shifumi.nickname')
 
 
 class handler(BaseHTTPRequestHandler):
@@ -47,7 +55,10 @@ class handler(BaseHTTPRequestHandler):
 
         # Handle nickname command
         nickname = slack_params['text']
+        logger.info(f"Nickname request from user {slack_params['user_id']}")
+        
         if not nickname:
+            logger.warning(f"Empty nickname provided by user {slack_params['user_id']}")
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -58,6 +69,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
             return
         else:
+            logger.info(f"Setting nickname '{nickname}' for user {slack_params['user_id']}")
             set_nickname(slack_params['user_id'], nickname, slack_params['user_name'])
             self.send_response(200)
             self.send_header('Content-type', 'application/json')

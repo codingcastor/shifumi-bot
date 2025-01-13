@@ -1,9 +1,17 @@
 import json
+import logging
 from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
 from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
 from lib.slack import verify_slack_request
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('shifumi.leaderboard')
 
 
 class handler(BaseHTTPRequestHandler):
@@ -32,6 +40,8 @@ class handler(BaseHTTPRequestHandler):
             'user_id': params.get('user_id', [''])[0],
             'channel_id': params.get('channel_id', [''])[0],
         }
+        
+        logger.info(f"Received leaderboard request from user {slack_params['user_id']}")
 
         # Initialize tables if needed
         init_tables()
