@@ -133,11 +133,11 @@ class handler(BaseHTTPRequestHandler):
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": f"*Coup*\n{move1.emoji} {move1.value}"
+                                    "text": f"*Coup*\n{move1.emoji}"
                                 },
                                 {
                                     "type": "mrkdwn",
-                                    "text": f"*Coup*\n{move2.emoji} {move2.value}"
+                                    "text": f"*Coup*\n{move2.emoji}"
                                 }
                             ]
                         },
@@ -218,11 +218,11 @@ class handler(BaseHTTPRequestHandler):
                                     },
                                     {
                                         "type": "mrkdwn",
-                                        "text": f"*Coup*\n{move1.emoji} {move1.value}"
+                                        "text": f"*Coup*\n{move1.emoji}"
                                     },
                                     {
                                         "type": "mrkdwn",
-                                        "text": f"*Coup*\n{move2.emoji} {move2.value}"
+                                        "text": f"*Coup*\n{move2.emoji}"
                                     }
                                 ]
                             },
