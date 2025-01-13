@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 from typing import List, Dict
 from urllib.parse import parse_qs
 
@@ -83,6 +83,10 @@ class handler(BaseHTTPRequestHandler):
                             {
                                 "type": "mrkdwn",
                                 "text": "*Défaites*\n" + f"`{stats['losses']}`"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": "*Egalités*\n" + f"`{stats['draws']}`"
                             },
                             {
                                 "type": "mrkdwn",
@@ -172,11 +176,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps({
-                'response_type': 'in_channel',
-                'blocks': blocks if not text else None,
-                'text': text if text else None
-            }).encode('utf-8'))
+        self.wfile.write(b'')
 
         # Send delayed response with leaderboard
         requests.post(
@@ -256,7 +256,3 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
             })
     
     return blocks
-
-if __name__ == '__main__':
-    server = HTTPServer(('localhost', 8080), handler)
-    server.serve_forever()

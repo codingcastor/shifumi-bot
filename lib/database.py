@@ -316,6 +316,7 @@ def get_user_stats(user_id):
     return {
         'wins': wins,
         'losses': losses,
+        'draws': draws,
         'total_games': total_games,
         'win_rate': win_rate,
         'nemesis': {
