@@ -68,7 +68,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
 
-            # Check if this is a response to a challenge or if there's already a challenge
+            # Check if there's already a challenge
             pending_challenge = get_pending_challenge(
                 target_user,  # The challenger
                 slack_params['user_id']  # The current player
@@ -85,31 +85,6 @@ class handler(BaseHTTPRequestHandler):
                 }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
-            elif pending_challenge:
-                # This is a response to a challenge
-                game_id, challenger_id, challenger_move = pending_challenge
-                challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
-                update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
-
-                # Determine winner
-                move1 = Gesture(challenger_move)
-                move2 = move
-
-                if move1 == move2:
-                    result = "Egalité !"
-                elif (
-                        (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
-                        (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
-                        (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
-                ):
-                    result = f"{challenger_nickname} gagne !"
-                else:
-                    result = f"{user_nickname} gagne !"
-
-                delayed_response = {
-                    'response_type': 'in_channel',
-                    'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}"
-                }
             else:
                 # This is a new challenge
                 create_game(
@@ -178,7 +153,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(b'')
             return
 
-        # Regular game without specific opponent
+        # Start new game
         try:
             move = Gesture.from_input(text_parts[0])
         except ValueError:
@@ -191,50 +166,6 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes(str(response), 'utf-8'))
             return
-
-        # Check for pending game
-        pending_game = get_pending_game(slack_params['channel_id'])
-
-        if pending_game:
-            game_id, player1_id, player1_move, _, _ = pending_game
-
-            # Don't allow same player to play twice
-            if player1_id == slack_params['user_id']:
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                response = {
-                    'response_type': 'ephemeral',
-                    'text': "Tu ne peux pas jouer contre toi-même ! Attend un autre joueur."
-                }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                return
-            else:
-                # Complete the game
-                update_game(game_id, slack_params['user_id'], slack_params['user_name'], move.value)
-
-            player1_nickname = get_nickname(player1_id) or f'<@{player1_id}>'
-
-            # Determine winner
-            move1 = Gesture(player1_move)
-            move2 = move
-
-            if move1 == move2:
-                result = "Egalité !"
-            elif (
-                    (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
-                    (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
-                    (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
-            ):
-                result = f"{player1_nickname} gagne !"
-            else:
-                result = f"{user_nickname} gagne !"
-
-            delayed_response = {
-                'response_type': 'in_channel',
-                'text': f"Résultat:\n{player1_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}"
-            }
-        else:
             # Start new game
             create_game(
                 slack_params['channel_id'],
