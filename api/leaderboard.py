@@ -64,41 +64,64 @@ class handler(BaseHTTPRequestHandler):
                 # Get user nickname or fallback to mention
                 user_name = get_nickname(target_user_id) or f"<@{target_user_id}>"
 
-                lines = [f"📊 *Statistiques de {user_name}* 📊\n"]
+                blocks = [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": f"📊 Statistiques de {user_name} 📊",
+                            "emoji": True
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {
+                                "type": "mrkdwn",
+                                "text": "*Victoires*\n" + f"`{stats['wins']}`"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": "*Défaites*\n" + f"`{stats['losses']}`"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": "*Total parties*\n" + f"`{stats['total_games']}`"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": "*Taux de victoire*\n" + f"`{stats['win_rate']}%`"
+                            }
+                        ]
+                    }
+                ]
 
-                # Overall stats
-                lines.append(
-                    f"• Bilan: {stats['wins']}W/{stats['losses']}L "
-                    f"({stats['win_rate']}% sur {stats['total_games']} parties)"
-                )
-
-                # Nemesis info
+                # Add relationships section if any exist
+                relationships = []
+                
                 if stats['nemesis']:
                     nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
-                    lines.append(
-                        f"• Némésis: {nemesis_name} (@{stats['nemesis']['user_name']}) "
-                        f"({stats['nemesis']['wins']} victoires)"
-                    )
+                    relationships.append(f"☠️ *Némésis*: {nemesis_name}\n`{stats['nemesis']['wins']}` victoires")
 
-                # Best against info
                 if stats['best_against']:
-                    best_against_name = get_nickname(
-                        stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
-                    lines.append(
-                        f"• Meilleur contre: {best_against_name} (@{stats['best_against']['user_name']}) "
-                        f"({stats['best_against']['wins']} victoires)"
-                    )
+                    best_against_name = get_nickname(stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
+                    relationships.append(f"💪 *Meilleur contre*: {best_against_name}\n`{stats['best_against']['wins']}` victoires")
 
-                # Most draws info
                 if stats['most_draws']:
-                    most_draws_name = get_nickname(
-                        stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
-                    lines.append(
-                        f"• Neutre contre: {most_draws_name} (@{stats['most_draws']['user_name']}) "
-                        f"({stats['most_draws']['draws']} égalités)"
-                    )
+                    most_draws_name = get_nickname(stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
+                    relationships.append(f"🤝 *Égalités avec*: {most_draws_name}\n`{stats['most_draws']['draws']}` égalités")
 
-                text = "\n".join(lines)
+                if relationships:
+                    blocks.append({"type": "divider"})
+                    blocks.append({
+                        "type": "section",
+                        "fields": [
+                            {"type": "mrkdwn", "text": rel}
+                            for rel in relationships
+                        ]
+                    })
+
+                text = None  # Fallback text not needed with blocks
         else:
             # Get leaderboard and unranked data
             leaderboard = get_leaderboard()
