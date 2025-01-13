@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import List, Dict
 from urllib.parse import parse_qs
 
@@ -175,8 +175,9 @@ class handler(BaseHTTPRequestHandler):
                     text = "Aucune partie jouée cette année ! 😢"
                     blocks = None
                 else:
-                    text = None  # Fallback text not needed with blocks
-                    blocks = format_leaderboard_blocks(leaderboard, unranked)
+                    text = "\n".join(lines)
+                    # Fallback text not needed with blocks
+                    #blocks = format_leaderboard_blocks(leaderboard, unranked)
 
             response_message = {
                 'response_type': 'in_channel',
@@ -186,6 +187,7 @@ class handler(BaseHTTPRequestHandler):
 
             # Send delayed response with leaderboard
             logger.info(f'Sending response to Slack: {json.dumps(response_message["blocks"])[:100]}...')
+            logger.info(f'Message size : {len(json.dumps(response_message))}')
             requests.post(
                 slack_params['response_url'],
                 json=response_message,
@@ -277,3 +279,7 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
             })
 
     return blocks
+
+if __name__ == '__main__':
+    server = HTTPServer(('localhost', 8080), handler)
+    server.serve_forever()
