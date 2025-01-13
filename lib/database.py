@@ -331,7 +331,7 @@ def get_leaderboard():
             total_games,
             win_rate
         FROM player_stats
-        ORDER BY  win_rate DESC, wins DESC,total_games DESC
+        ORDER BY win_rate DESC, wins DESC,total_games DESC
     ''')
 
     results = cur.fetchall()
