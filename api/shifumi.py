@@ -124,7 +124,51 @@ class handler(BaseHTTPRequestHandler):
                 target_nickname = get_nickname(target_user) or f'<@{target_user}>'
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"{user_nickname} défie {target_nickname} ! Pour accepter le défi, utilise '/shifumi @{slack_params['user_name']} [PIERRE|FEUILLE|CISEAUX]'"
+                    'text': f"{user_nickname} défie {target_nickname} !",
+                    'blocks': [
+                        {
+                            'type': 'section',
+                            'text': {
+                                'type': 'mrkdwn',
+                                'text': f"{user_nickname} défie {target_nickname} !"
+                            }
+                        },
+                        {
+                            'type': 'actions',
+                            'elements': [
+                                {
+                                    'type': 'button',
+                                    'text': {
+                                        'type': 'plain_text',
+                                        'text': '🪨 Pierre',
+                                        'emoji': True
+                                    },
+                                    'value': f'@{slack_params["user_name"]} PIERRE',
+                                    'action_id': 'play_rock'
+                                },
+                                {
+                                    'type': 'button',
+                                    'text': {
+                                        'type': 'plain_text',
+                                        'text': '🍃 Feuille',
+                                        'emoji': True
+                                    },
+                                    'value': f'@{slack_params["user_name"]} FEUILLE',
+                                    'action_id': 'play_paper'
+                                },
+                                {
+                                    'type': 'button',
+                                    'text': {
+                                        'type': 'plain_text',
+                                        'text': '✂️ Ciseaux',
+                                        'emoji': True
+                                    },
+                                    'value': f'@{slack_params["user_name"]} CISEAUX',
+                                    'action_id': 'play_scissors'
+                                }
+                            ]
+                        }
+                    ]
                 }
 
             requests.post(slack_params['response_url'], json=delayed_response)
@@ -201,7 +245,51 @@ class handler(BaseHTTPRequestHandler):
             )
             delayed_response = {
                 'response_type': 'in_channel',
-                'text': f"{user_nickname} a joué. En attente d'un adversaire..."
+                'text': f"{user_nickname} a joué. En attente d'un adversaire...",
+                'blocks': [
+                    {
+                        'type': 'section',
+                        'text': {
+                            'type': 'mrkdwn',
+                            'text': f"{user_nickname} a joué. En attente d'un adversaire..."
+                        }
+                    },
+                    {
+                        'type': 'actions',
+                        'elements': [
+                            {
+                                'type': 'button',
+                                'text': {
+                                    'type': 'plain_text',
+                                    'text': '🪨 Pierre',
+                                    'emoji': True
+                                },
+                                'value': 'PIERRE',
+                                'action_id': 'play_rock'
+                            },
+                            {
+                                'type': 'button',
+                                'text': {
+                                    'type': 'plain_text',
+                                    'text': '🍃 Feuille',
+                                    'emoji': True
+                                },
+                                'value': 'FEUILLE',
+                                'action_id': 'play_paper'
+                            },
+                            {
+                                'type': 'button',
+                                'text': {
+                                    'type': 'plain_text',
+                                    'text': '✂️ Ciseaux',
+                                    'emoji': True
+                                },
+                                'value': 'CISEAUX',
+                                'action_id': 'play_scissors'
+                            }
+                        ]
+                    }
+                ]
             }
         requests.post(
             slack_params['response_url'],
