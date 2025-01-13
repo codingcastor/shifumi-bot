@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler
 import os
 import requests
 from urllib.parse import parse_qs
-from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
+from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats, get_unranked_players
 from lib.slack import verify_slack_request
 
 # Configure logging
