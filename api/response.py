@@ -64,10 +64,10 @@ class handler(BaseHTTPRequestHandler):
                 raise ValueError("Invalid action")
 
             # Handle challenge response
-            if ' ' in action_value:  # Format: "@username MOVE"
-                challenger_name = action_value.split()[0][1:]  # Remove @ prefix
+            if ' ' in action_value:  # Format: "<@userid> MOVE"
+                challenger_id = action_value.split()[0][2:-1]  # Remove <@ and >
                 # Get pending challenge
-                pending_challenge = get_pending_challenge(None, user_id)  # We'll update database query later
+                pending_challenge = get_pending_challenge(challenger_id, user_id)
                 
                 if pending_challenge:
                     game_id, challenger_id, challenger_move = pending_challenge

@@ -118,7 +118,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '🪨 Pierre',
                                         'emoji': True
                                     },
-                                    'value': f'@{slack_params["user_name"]} PIERRE',
+                                    'value': f'<@{slack_params["user_id"]}> PIERRE',
                                     'action_id': 'play_rock'
                                 },
                                 {
@@ -128,7 +128,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '🍃 Feuille',
                                         'emoji': True
                                     },
-                                    'value': f'@{slack_params["user_name"]} FEUILLE',
+                                    'value': f'<@{slack_params["user_id"]}> FEUILLE',
                                     'action_id': 'play_paper'
                                 },
                                 {
@@ -138,7 +138,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '✂️ Ciseaux',
                                         'emoji': True
                                     },
-                                    'value': f'@{slack_params["user_name"]} CISEAUX',
+                                    'value': f'<@{slack_params["user_id"]}> CISEAUX',
                                     'action_id': 'play_scissors'
                                 }
                             ]
