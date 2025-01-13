@@ -400,6 +400,7 @@ def get_leaderboard():
                 p.player_name,
                 p.wins,
                 p.losses,
+                p.draws,
                 p.total_games,
                 ROUND(CAST(CAST(p.wins AS FLOAT) / NULLIF(p.total_games, 0) * 100 AS numeric), 1) as win_rate
             FROM (
@@ -424,6 +425,7 @@ def get_leaderboard():
             player_name as user_name,
             wins,
             losses,
+            draws,
             total_games,
             win_rate
         FROM player_stats
@@ -440,8 +442,9 @@ def get_leaderboard():
             'user_name': row[1],
             'wins': row[2],
             'losses': row[3],
-            'total_games': row[4],
-            'win_rate': row[5]
+            'draws': row[4],
+            'total_games': row[5],
+            'win_rate': row[6]
         }
         for row in results
     ]

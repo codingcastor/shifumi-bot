@@ -1,9 +1,10 @@
-import json
 import logging
-from http.server import BaseHTTPRequestHandler
 import os
-import requests
+from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs
+
+import requests
+
 from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats, get_unranked_players
 from lib.slack import verify_slack_request
 
@@ -41,7 +42,7 @@ class handler(BaseHTTPRequestHandler):
             'user_id': params.get('user_id', [''])[0],
             'channel_id': params.get('channel_id', [''])[0],
         }
-        
+
         logger.info(f"Received leaderboard request from user {slack_params['user_id']}")
 
         # Initialize tables if needed
@@ -93,7 +94,7 @@ class handler(BaseHTTPRequestHandler):
             unranked = get_unranked_players()
 
             lines = []
-            
+
             # Format ranked players
             if leaderboard:
                 lines.append("🏆 *Classement de l'année* 🏆\n")
