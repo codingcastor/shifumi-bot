@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from http.server import BaseHTTPRequestHandler
@@ -184,7 +185,7 @@ class handler(BaseHTTPRequestHandler):
             }
 
             # Send delayed response with leaderboard
-            logger.info(f'Sending response to Slack: {response_message["text"][:100]}...')
+            logger.info(f'Sending response to Slack: {json.dumps(response_message["blocks"])[:100]}...')
             requests.post(
                 slack_params['response_url'],
                 json=response_message,
