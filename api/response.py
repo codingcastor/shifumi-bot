@@ -111,9 +111,48 @@ class handler(BaseHTTPRequestHandler):
                     else:
                         result = f"{user_nickname} gagne !"
                     
+                    blocks = [
+                        {
+                            "type": "header",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "🎮 Résultat du défi 🎮",
+                                "emoji": True
+                            }
+                        },
+                        {
+                            "type": "section",
+                            "fields": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": f"*Joueur 1*\n{challenger_nickname}"
+                                },
+                                {
+                                    "type": "mrkdwn",
+                                    "text": f"*Joueur 2*\n{user_nickname}"
+                                },
+                                {
+                                    "type": "mrkdwn",
+                                    "text": f"*Coup*\n{move1.emoji} {move1.value}"
+                                },
+                                {
+                                    "type": "mrkdwn",
+                                    "text": f"*Coup*\n{move2.emoji} {move2.value}"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"*Résultat:* {result}"
+                            }
+                        }
+                    ]
                     response_message = {
                         'response_type': 'in_channel',
-                        'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
+                        'blocks': blocks,
+                        'text': f"Résultat du défi: {challenger_nickname} vs {user_nickname}",  # Fallback text
                         'replace_original': True
                     }
                 else:
@@ -157,9 +196,48 @@ class handler(BaseHTTPRequestHandler):
                         else:
                             result = f"{user_nickname} gagne !"
                         
+                        blocks = [
+                            {
+                                "type": "header",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🎮 Résultat de la partie 🎮",
+                                    "emoji": True
+                                }
+                            },
+                            {
+                                "type": "section",
+                                "fields": [
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": f"*Joueur 1*\n{player1_nickname}"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": f"*Joueur 2*\n{user_nickname}"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": f"*Coup*\n{move1.emoji} {move1.value}"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": f"*Coup*\n{move2.emoji} {move2.value}"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "section",
+                                "text": {
+                                    "type": "mrkdwn",
+                                    "text": f"*Résultat:* {result}"
+                                }
+                            }
+                        ]
                         response_message = {
                             'response_type': 'in_channel',
-                            'text': f"Résultat:\n{player1_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
+                            'blocks': blocks,
+                            'text': f"Résultat: {player1_nickname} vs {user_nickname}",  # Fallback text
                             'replace_original': True
                         }
                 else:
