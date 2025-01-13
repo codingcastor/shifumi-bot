@@ -87,6 +87,15 @@ class handler(BaseHTTPRequestHandler):
                         f"({stats['best_against']['wins']} victoires)"
                     )
 
+                # Most draws info
+                if stats['most_draws']:
+                    most_draws_name = get_nickname(
+                        stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
+                    lines.append(
+                        f"• Neutre contre: {most_draws_name} (@{stats['most_draws']['user_name']}) "
+                        f"({stats['most_draws']['draws']} égalités)"
+                    )
+
                 text = "\n".join(lines)
         else:
             # Get leaderboard and unranked data

@@ -170,11 +170,12 @@ def get_pending_challenges():
         for row in results
     ]
 
+
 def get_user_stats(user_id):
     """Get detailed stats for a specific user"""
     conn = get_db_connection()
     cur = conn.cursor()
-    
+
     # Get overall stats
     cur.execute('''
         WITH game_results AS (
@@ -184,7 +185,8 @@ def get_user_stats(user_id):
                 player1_name as winner_name,
                 player2_id as loser_id,
                 player2_name as loser_name,
-                created_at
+                created_at,
+                'WIN' as result
             FROM games 
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -200,8 +202,9 @@ def get_user_stats(user_id):
                 player2_name as winner_name,
                 player1_id as loser_id,
                 player1_name as loser_name,
-                created_at
-            FROM games 
+                created_at,
+                'WIN' as result
+            FROM games
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
                 AND (
@@ -209,6 +212,34 @@ def get_user_stats(user_id):
                     (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
                     (player2_move = 'SCISSORS' AND player1_move = 'PAPER')
                 )
+            UNION ALL
+             -- Draws as player 1
+            SELECT
+                player1_id as winner_id,
+                player1_name as winner_name,
+                player2_id as loser_id,
+                player2_name as loser_name,
+                created_at,
+                'DRAW' as result
+            FROM games
+            WHERE status = 'complete'
+                AND player1_id = %s
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_move = player2_move
+            UNION ALL
+            -- Draws as player 2
+            SELECT
+                player2_id as winner_id,
+                player2_name as winner_name,
+                player1_id as loser_id,
+                player1_name as loser_name,
+                created_at,
+                'DRAW' as result
+            FROM games
+            WHERE status = 'complete'
+                AND player2_id = %s
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_move = player2_move
         ),
         nemesis AS (
             SELECT 
@@ -217,6 +248,7 @@ def get_user_stats(user_id):
                 COUNT(*) as wins
             FROM game_results
             WHERE loser_id = %s
+            AND result = 'WIN'
             GROUP BY winner_id, winner_name
             ORDER BY wins DESC
             LIMIT 1
@@ -228,44 +260,59 @@ def get_user_stats(user_id):
                 COUNT(*) as wins
             FROM game_results
             WHERE winner_id = %s
+            AND result = 'WIN'
             GROUP BY loser_id, loser_name
             ORDER BY wins DESC
             LIMIT 1
         ),
+        most_draws AS (
+            SELECT loser_id as opponent_id, loser_name as opponent_name,
+                count(*) as draws
+            FROM game_results
+            WHERE result = 'DRAW'
+            GROUP BY loser_id, loser_name
+            ORDER BY draws DESC
+            LIMIT 1
+        ),
         user_stats AS (
             SELECT 
-                COUNT(CASE WHEN winner_id = %s THEN 1 END) as wins,
-                COUNT(CASE WHEN loser_id = %s THEN 1 END) as losses,
-                COUNT(*) as total_games
+                COUNT(CASE WHEN winner_id = %s AND result = 'WIN' THEN 1 END) as wins,
+                COUNT(CASE WHEN loser_id = %s  AND result = 'WIN' THEN 1 END) as losses,
+                COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws
             FROM game_results
             WHERE winner_id = %s OR loser_id = %s
         )
         SELECT 
-            s.wins, s.losses, s.total_games,
+            s.wins, s.losses, s.draws,
             n.opponent_id as nemesis_id,
             n.opponent_name as nemesis_name,
             n.wins as nemesis_wins,
             b.opponent_id as best_against_id,
             b.opponent_name as best_against_name,
-            b.wins as best_against_wins
+            b.wins as best_against_wins,
+            md.opponent_id as most_draws_id, md.opponent_name as most_draws_name,
+            md.draws as most_draws_count
         FROM user_stats s
         LEFT JOIN nemesis n ON true
         LEFT JOIN best_against b ON true
-    ''', (user_id, user_id, user_id, user_id, user_id, user_id))
-    
+        LEFT JOIN most_draws md ON true
+    ''', (user_id, user_id, user_id, user_id, user_id, user_id, user_id, user_id))
+
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     if not result:
         return None
-        
-    wins, losses, total_games = result[0:3]
+
+    wins, losses, draws = result[0:3]
     nemesis_id, nemesis_name, nemesis_wins = result[3:6]
     best_against_id, best_again_name, best_against_wins = result[6:9]
-    
+    most_draws_id, most_draws_name, most_draws_wins = result[9:12]
+    total_games = wins + losses + draws
+
     win_rate = round(wins / total_games * 100, 1) if total_games > 0 else 0
-    
+
     return {
         'wins': wins,
         'losses': losses,
@@ -280,8 +327,14 @@ def get_user_stats(user_id):
             'user_id': best_against_id,
             'user_name': best_again_name,
             'wins': best_against_wins
-        } if best_against_id else None
+        } if best_against_id else None,
+        'most_draws': {
+            'user_id': most_draws_id,
+            'user_name': most_draws_name,
+            'draws': most_draws_wins
+        }
     }
+
 
 def get_unranked_players():
     """Get players who haven't played enough games to be ranked"""
@@ -331,6 +384,7 @@ def get_unranked_players():
         }
         for row in results
     ]
+
 
 def get_leaderboard():
     """Get the leaderboard for the current year"""
