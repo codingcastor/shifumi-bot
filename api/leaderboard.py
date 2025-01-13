@@ -33,14 +33,12 @@ class handler(BaseHTTPRequestHandler):
             'channel_id': params.get('channel_id', [''])[0],
         }
 
-        print('there')
         # Initialize tables if needed
         init_tables()
 
         # Check if a user was specified
         text = slack_params['text'].strip()
         if text and text.startswith('<@'):
-            print('user')
             # Extract user ID from mention
             target_user_id = text[2:-1].split('|')[0]
 
@@ -80,7 +78,6 @@ class handler(BaseHTTPRequestHandler):
 
                 text = "\n".join(lines)
         else:
-            print('leaderboard')
             # Get leaderboard data
             leaderboard = get_leaderboard()
 
@@ -93,7 +90,7 @@ class handler(BaseHTTPRequestHandler):
                 for i, player in enumerate(leaderboard, 1):
                     # Get player nickname and username
                     nickname = get_nickname(player['player_id'])
-                    player_name = f"{nickname} ({player['user_name']})" if nickname else f"<@{player['player_id']}>"
+                    player_name = f"{nickname} (@{player['user_name']})" if nickname else f"<@{player['player_id']}>"
 
                     # Add medal for top 3
                     medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
