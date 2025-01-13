@@ -309,6 +309,7 @@ def get_leaderboard():
         player_stats AS (
             SELECT 
                 p.player_id,
+                p.player_name,
                 p.wins,
                 p.losses,
                 p.total_games,
@@ -325,13 +326,13 @@ def get_leaderboard():
                     UNION ALL
                     SELECT loser_id as player_id, loser_name as player_name, FALSE as is_win FROM game_results
                 ) all_results
-                GROUP BY player_id
+                GROUP BY player_id, player_name
             ) p
             WHERE p.total_games > 0
         )
         SELECT 
             player_id,
-            MAX(player_name) as user_name,
+            player_name as user_name,
             wins,
             losses,
             total_games,
