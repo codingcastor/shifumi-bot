@@ -64,8 +64,8 @@ class handler(BaseHTTPRequestHandler):
                 raise ValueError("Invalid action")
 
             # Handle challenge response
-            if ' ' in action_value:  # Format: "<@userid> MOVE"
-                challenger_id = action_value.split()[0][2:-1]  # Remove <@ and >
+            if ' ' in action_value:  # Format: "userid MOVE"
+                challenger_id = action_value.split()[0]
                 # Get pending challenge
                 pending_challenge = get_pending_challenge(challenger_id, user_id)
                 
@@ -144,9 +144,9 @@ class handler(BaseHTTPRequestHandler):
                         }
                 else:
                     response_message = {
-                        'response_type': 'ephemeral',
+                        'response_type': 'in_channel',
                         'text': "Partie non trouvée ou expirée.",
-                        'replace_original': False
+                        'replace_original': True
                     }
 
             # Send response
