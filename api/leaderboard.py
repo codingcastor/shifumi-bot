@@ -108,7 +108,7 @@ class handler(BaseHTTPRequestHandler):
 
                     lines.append(
                         f"{medal} {player_name} - "
-                        f"{player['wins']}W/{player['losses']}L "
+                        f"{player['wins']}W/{player['draws']}D/{player['losses']}L "
                         f"({player['win_rate']}% sur {player['total_games']} parties)"
                     )
 

@@ -344,7 +344,8 @@ def get_leaderboard():
                 player1_id as winner_id,
                 player2_id as loser_id,
                 player1_name as winner_name,
-                player2_name as loser_name
+                player2_name as loser_name,
+                'WIN' as result
             FROM games 
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -359,7 +360,8 @@ def get_leaderboard():
                 player2_id as winner_id,
                 player1_id as loser_id,
                 player2_name as winner_name,
-                player1_name as loser_name
+                player1_name as loser_name,
+                'WIN' as result
             FROM games 
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -368,6 +370,29 @@ def get_leaderboard():
                     (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
                     (player2_move = 'SCISSORS' AND player1_move = 'PAPER')
                 )
+            UNION ALL
+            -- Draws (each player gets counted once)
+            SELECT 
+                player1_id as winner_id,
+                player2_id as loser_id,
+                player1_name as winner_name,
+                player2_name as loser_name,
+                'DRAW' as result
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_move = player2_move
+            UNION ALL
+            SELECT 
+                player2_id as winner_id,
+                player1_id as loser_id,
+                player2_name as winner_name,
+                player1_name as loser_name,
+                'DRAW' as result
+            FROM games 
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_move = player2_move
         ),
         player_stats AS (
             SELECT 
@@ -381,13 +406,14 @@ def get_leaderboard():
                 SELECT 
                     player_id,
                     player_name,
-                    COUNT(CASE WHEN is_win THEN 1 END) as wins,
-                    COUNT(CASE WHEN NOT is_win THEN 1 END) as losses,
+                    COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
+                    COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+                    COUNT(CASE WHEN result IS NULL THEN 1 END) as losses,
                     COUNT(*) as total_games
                 FROM (
-                    SELECT winner_id as player_id, winner_name as player_name, TRUE as is_win FROM game_results
+                    SELECT winner_id as player_id, winner_name as player_name, result FROM game_results
                     UNION ALL
-                    SELECT loser_id as player_id, loser_name as player_name, FALSE as is_win FROM game_results
+                    SELECT loser_id as player_id, loser_name as player_name, NULL as result FROM game_results WHERE result = 'WIN'
                 ) all_results
                 GROUP BY player_id, player_name
             ) p
