@@ -58,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
             return
         else:
-            set_nickname(slack_params['user_id'], nickname)
+            set_nickname(slack_params['user_id'], nickname, slack_params['user_name'])
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()

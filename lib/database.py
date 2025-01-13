@@ -15,6 +15,7 @@ def init_tables():
         CREATE TABLE IF NOT EXISTS nicknames (
             user_id TEXT PRIMARY KEY,
             nickname TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -120,16 +121,19 @@ def get_nickname(user_id):
     return result[0] if result else None
 
 
-def set_nickname(user_id, nickname):
-    """Set or update a user's nickname"""
+def set_nickname(user_id, nickname, user_name):
+    """Set or update a user's nickname and username"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO nicknames (user_id, nickname)
-        VALUES (%s, %s)
+        INSERT INTO nicknames (user_id, nickname, user_name)
+        VALUES (%s, %s, %s)
         ON CONFLICT (user_id) 
-        DO UPDATE SET nickname = EXCLUDED.nickname, updated_at = CURRENT_TIMESTAMP
-    ''', (user_id, nickname))
+        DO UPDATE SET 
+            nickname = EXCLUDED.nickname,
+            user_name = EXCLUDED.user_name,
+            updated_at = CURRENT_TIMESTAMP
+    ''', (user_id, nickname, user_name))
     conn.commit()
     cur.close()
     conn.close()

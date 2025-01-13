@@ -91,8 +91,9 @@ class handler(BaseHTTPRequestHandler):
                 lines = ["🏆 *Classement de l'année* 🏆\n"]
 
                 for i, player in enumerate(leaderboard, 1):
-                    # Get player nickname or fallback to mention
-                    player_name = get_nickname(player['player_id']) or f"<@{player['player_id']}>"
+                    # Get player nickname and username
+                    nickname = get_nickname(player['player_id'])
+                    player_name = f"{nickname} ({player['user_name']})" if nickname else f"<@{player['player_id']}>"
 
                     # Add medal for top 3
                     medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
