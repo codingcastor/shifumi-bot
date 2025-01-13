@@ -1,6 +1,7 @@
 import logging
 import os
 from http.server import BaseHTTPRequestHandler
+from typing import List, Dict
 from urllib.parse import parse_qs
 
 import requests
@@ -136,7 +137,12 @@ class handler(BaseHTTPRequestHandler):
                         f"(encore {player['games_needed']} parties)"
                     )
 
-            text = "\n".join(lines) if lines else "Aucune partie jouée cette année ! 😢"
+            if not leaderboard and not unranked:
+                text = "Aucune partie jouée cette année ! 😢"
+                blocks = None
+            else:
+                text = None  # Fallback text not needed with blocks
+                blocks = format_leaderboard_blocks(leaderboard, unranked)
 
         # Send immediate empty response
         self.send_response(200)
@@ -149,7 +155,77 @@ class handler(BaseHTTPRequestHandler):
             slack_params['response_url'],
             json={
                 'response_type': 'in_channel',
-                'text': text
+                'blocks': blocks if not text else None,
+                'text': text if text else None
             }
         )
+
+def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
+    """Format leaderboard data as Slack blocks"""
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "🏆 Classement de l'année 🏆",
+                "emoji": True
+            }
+        },
+        {
+            "type": "divider"
+        }
+    ]
+    
+    if leaderboard:
+        fields = []
+        for i, player in enumerate(leaderboard, 1):
+            nickname = get_nickname(player['player_id'])
+            player_name = f"{nickname} (@{player['user_name']})" if nickname else f"<@{player['player_id']}>"
+            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+            
+            fields.extend([
+                {
+                    "type": "mrkdwn",
+                    "text": f"{medal} *{player_name}*"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"W/D/L: `{player['wins']}/{player['draws']}/{player['losses']}` • {player['win_rate']}%"
+                }
+            ])
+            
+            if i % 5 == 0 or i == len(leaderboard):
+                blocks.append({
+                    "type": "section",
+                    "fields": fields
+                })
+                fields = []
+    
+    if unranked:
+        blocks.extend([
+            {
+                "type": "divider"
+            },
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "👥 Joueurs non classés",
+                    "emoji": True
+                }
+            }
+        ])
+        
+        for player in unranked:
+            nickname = get_nickname(player['player_id'])
+            player_name = f"{nickname} (@{player['player_name']})" if nickname else f"<@{player['player_id']}>"
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"• {player_name} - `{player['games_played']}/5` parties jouées (encore {player['games_needed']} parties)"
+                }
+            })
+    
+    return blocks
         return
