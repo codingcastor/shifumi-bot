@@ -181,7 +181,9 @@ def get_user_stats(user_id):
             -- First player wins
             SELECT 
                 player1_id as winner_id,
+                player1_name as winner_name,
                 player2_id as loser_id,
+                player2_name as loser_name,
                 created_at
             FROM games 
             WHERE status = 'complete'
@@ -195,7 +197,9 @@ def get_user_stats(user_id):
             -- Second player wins
             SELECT 
                 player2_id as winner_id,
+                player2_name as winner_name,
                 player1_id as loser_id,
+                player1_name as loser_name,
                 created_at
             FROM games 
             WHERE status = 'complete'
@@ -209,20 +213,22 @@ def get_user_stats(user_id):
         nemesis AS (
             SELECT 
                 winner_id as opponent_id,
+                winner_name as opponent_name,
                 COUNT(*) as wins
             FROM game_results
             WHERE loser_id = %s
-            GROUP BY winner_id
+            GROUP BY winner_id, winner_name
             ORDER BY wins DESC
             LIMIT 1
         ),
         best_against AS (
             SELECT 
                 loser_id as opponent_id,
+                loser_name as opponent_name,
                 COUNT(*) as wins
             FROM game_results
             WHERE winner_id = %s
-            GROUP BY loser_id
+            GROUP BY loser_id, loser_name
             ORDER BY wins DESC
             LIMIT 1
         ),
@@ -236,8 +242,12 @@ def get_user_stats(user_id):
         )
         SELECT 
             s.wins, s.losses, s.total_games,
-            n.opponent_id as nemesis_id, n.wins as nemesis_wins,
-            b.opponent_id as best_against_id, b.wins as best_against_wins
+            n.opponent_id as nemesis_id,
+            n.opponent_name as nemesis_name,
+            n.wins as nemesis_wins,
+            b.opponent_id as best_against_id,
+            b.opponent_name as best_against_name,
+            b.wins as best_against_wins
         FROM user_stats s
         LEFT JOIN nemesis n ON true
         LEFT JOIN best_against b ON true
@@ -251,8 +261,8 @@ def get_user_stats(user_id):
         return None
         
     wins, losses, total_games = result[0:3]
-    nemesis_id, nemesis_wins = result[3:5]
-    best_against_id, best_against_wins = result[5:7]
+    nemesis_id, nemesis_name, nemesis_wins = result[3:6]
+    best_against_id, best_again_name, best_against_wins = result[6:9]
     
     win_rate = round(wins / total_games * 100, 1) if total_games > 0 else 0
     
@@ -263,10 +273,12 @@ def get_user_stats(user_id):
         'win_rate': win_rate,
         'nemesis': {
             'user_id': nemesis_id,
+            'user_name': nemesis_name,
             'wins': nemesis_wins
         } if nemesis_id else None,
         'best_against': {
             'user_id': best_against_id,
+            'user_name': best_again_name,
             'wins': best_against_wins
         } if best_against_id else None
     }

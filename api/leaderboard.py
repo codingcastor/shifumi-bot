@@ -1,5 +1,5 @@
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
 from lib.database import init_tables, get_leaderboard, get_nickname, get_user_stats
@@ -38,11 +38,9 @@ class handler(BaseHTTPRequestHandler):
 
         # Check if a user was specified
         text = slack_params['text'].strip()
-        print(text)
         if text and text.startswith('<@'):
             # Extract user ID from mention
             target_user_id = text[2:-1].split('|')[0]
-            print(target_user_id)
             # Get user stats
             stats = get_user_stats(target_user_id)
 
@@ -64,7 +62,7 @@ class handler(BaseHTTPRequestHandler):
                 if stats['nemesis']:
                     nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
                     lines.append(
-                        f"• Némésis: {nemesis_name} "
+                        f"• Némésis: {nemesis_name} (@{stats['nemesis']['user_name']}) "
                         f"({stats['nemesis']['wins']} victoires)"
                     )
 
@@ -73,7 +71,7 @@ class handler(BaseHTTPRequestHandler):
                     best_against_name = get_nickname(
                         stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
                     lines.append(
-                        f"• Meilleur contre: {best_against_name} "
+                        f"• Meilleur contre: {best_against_name} (@{stats['best_against']['user_name']}) "
                         f"({stats['best_against']['wins']} victoires)"
                     )
 
@@ -116,7 +114,3 @@ class handler(BaseHTTPRequestHandler):
 
         self.wfile.write(json.dumps(response).encode('utf-8'))
         return
-
-if __name__ == '__main__':
-    server = HTTPServer(('localhost', 8080), handler)
-    server.serve_forever()
