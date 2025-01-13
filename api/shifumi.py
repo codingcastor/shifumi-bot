@@ -167,9 +167,9 @@ class handler(BaseHTTPRequestHandler):
             if move1 == move2:
                 result = "Egalité !"
             elif (
-                    (move1 == Gesture.PIERRE and move2 == Gesture.CISEAUX) or
-                    (move1 == Gesture.FEUILLE and move2 == Gesture.PIERRE) or
-                    (move1 == Gesture.CISEAUX and move2 == Gesture.FEUILLE)
+                    (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
+                    (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
+                    (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
             ):
                 result = f"{player1_nickname} gagne !"
             else:
