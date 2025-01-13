@@ -102,18 +102,22 @@ class handler(BaseHTTPRequestHandler):
 
                 # Add relationships section if any exist
                 relationships = []
-                
+
                 if stats['nemesis']:
                     nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
                     relationships.append(f"☠️ *Némésis*: {nemesis_name}\n`{stats['nemesis']['wins']}` victoires")
 
                 if stats['best_against']:
-                    best_against_name = get_nickname(stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
-                    relationships.append(f"💪 *Meilleur contre*: {best_against_name}\n`{stats['best_against']['wins']}` victoires")
+                    best_against_name = get_nickname(
+                        stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
+                    relationships.append(
+                        f"💪 *Meilleur contre*: {best_against_name}\n`{stats['best_against']['wins']}` victoires")
 
                 if stats['most_draws']:
-                    most_draws_name = get_nickname(stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
-                    relationships.append(f"🤝 *Égalités avec*: {most_draws_name}\n`{stats['most_draws']['draws']}` égalités")
+                    most_draws_name = get_nickname(
+                        stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
+                    relationships.append(
+                        f"🤝 *Égalités avec*: {most_draws_name}\n`{stats['most_draws']['draws']}` égalités")
 
                 if relationships:
                     blocks.append({"type": "divider"})
@@ -188,6 +192,7 @@ class handler(BaseHTTPRequestHandler):
             }
         )
 
+
 def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
     """Format leaderboard data as Slack blocks"""
     blocks = [
@@ -203,14 +208,14 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
             "type": "divider"
         }
     ]
-    
+
     if leaderboard:
         fields = []
         for i, player in enumerate(leaderboard, 1):
             nickname = get_nickname(player['player_id'])
             player_name = f"{nickname} ({player['user_name']})" if nickname else f"<@{player['player_id']}>"
             medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
-            
+
             fields.extend([
                 {
                     "type": "mrkdwn",
@@ -221,14 +226,11 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
                     "text": f"W/D/L: `{player['wins']}/{player['draws']}/{player['losses']}` • {player['win_rate']}%"
                 }
             ])
-            
-            if i % 5 == 0 or i == len(leaderboard):
-                blocks.append({
-                    "type": "section",
-                    "fields": fields
-                })
-                fields = []
-    
+
+        blocks.append({
+            "type": "section",
+            "fields": fields
+        })
     if unranked:
         blocks.extend([
             {
@@ -243,7 +245,7 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
                 }
             }
         ])
-        
+
         for player in unranked:
             nickname = get_nickname(player['player_id'])
             player_name = f"{nickname} ({player['player_name']})" if nickname else f"<@{player['player_id']}>"
@@ -251,8 +253,8 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"• {player_name} - `{player['games_played']}/5` parties jouées (encore {player['games_needed']} parties)"
+                    "text": f"{player_name} - `{player['games_played']}/5` parties jouées (encore {player['games_needed']} parties)"
                 }
             })
-    
+
     return blocks
