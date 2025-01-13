@@ -214,12 +214,12 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
         for i, player in enumerate(leaderboard, 1):
             nickname = get_nickname(player['player_id'])
             player_name = f"{nickname} ({player['user_name']})" if nickname else f"<@{player['player_id']}>"
-            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, '')
 
             fields.extend([
                 {
                     "type": "mrkdwn",
-                    "text": f"{medal} *{player_name}*"
+                    "text": f"{i}. *{player_name}* {medal}"
                 },
                 {
                     "type": "mrkdwn",
