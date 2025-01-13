@@ -279,7 +279,9 @@ def get_leaderboard():
             -- First player wins
             SELECT 
                 player1_id as winner_id,
-                player2_id as loser_id
+                player2_id as loser_id,
+                player1_name as winner_name,
+                player2_name as loser_name
             FROM games 
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -292,7 +294,9 @@ def get_leaderboard():
             -- Second player wins
             SELECT 
                 player2_id as winner_id,
-                player1_id as loser_id
+                player1_id as loser_id,
+                player2_name as winner_name,
+                player1_name as loser_name
             FROM games 
             WHERE status = 'complete'
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -312,13 +316,14 @@ def get_leaderboard():
             FROM (
                 SELECT 
                     player_id,
+                    player_name,
                     COUNT(CASE WHEN is_win THEN 1 END) as wins,
                     COUNT(CASE WHEN NOT is_win THEN 1 END) as losses,
                     COUNT(*) as total_games
                 FROM (
-                    SELECT winner_id as player_id, TRUE as is_win FROM game_results
+                    SELECT winner_id as player_id, winner_name as player_name, TRUE as is_win FROM game_results
                     UNION ALL
-                    SELECT loser_id as player_id, FALSE as is_win FROM game_results
+                    SELECT loser_id as player_id, loser_name as player_name, FALSE as is_win FROM game_results
                 ) all_results
                 GROUP BY player_id
             ) p
@@ -326,6 +331,7 @@ def get_leaderboard():
         )
         SELECT 
             player_id,
+            MAX(player_name) as user_name,
             wins,
             losses,
             total_games,
@@ -341,10 +347,11 @@ def get_leaderboard():
     return [
         {
             'player_id': row[0],
-            'wins': row[1],
-            'losses': row[2],
-            'total_games': row[3],
-            'win_rate': row[4]
+            'user_name': row[1],
+            'wins': row[2],
+            'losses': row[3],
+            'total_games': row[4],
+            'win_rate': row[5]
         }
         for row in results
     ]
