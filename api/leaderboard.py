@@ -105,19 +105,19 @@ class handler(BaseHTTPRequestHandler):
 
                 if stats['nemesis']:
                     nemesis_name = get_nickname(stats['nemesis']['user_id']) or f"<@{stats['nemesis']['user_id']}>"
-                    relationships.append(f"☠️ *Némésis*: {nemesis_name}\n`{stats['nemesis']['wins']}` victoires")
+                    relationships.append(f"☠️ *Némésis*: {nemesis_name} ({stats['nemesis']['wins']} victoires)")
 
                 if stats['best_against']:
                     best_against_name = get_nickname(
                         stats['best_against']['user_id']) or f"<@{stats['best_against']['user_id']}>"
                     relationships.append(
-                        f"💪 *Meilleur contre*: {best_against_name}\n`{stats['best_against']['wins']}` victoires")
+                        f"💪 *Meilleur contre*: {best_against_name} ({stats['best_against']['wins']} victoires)")
 
                 if stats['most_draws']:
                     most_draws_name = get_nickname(
                         stats['most_draws']['user_id']) or f"<@{stats['most_draws']['user_id']}>"
                     relationships.append(
-                        f"🤝 *Égalités avec*: {most_draws_name}\n`{stats['most_draws']['draws']}` égalités")
+                        f"🤝 *Égalités avec*: {most_draws_name} ({stats['most_draws']['draws']} égalités)")
 
                 if relationships:
                     blocks.append({"type": "divider"})
@@ -147,10 +147,10 @@ class handler(BaseHTTPRequestHandler):
                     player_name = f"{nickname} (@{player['user_name']})" if nickname else f"<@{player['player_id']}>"
 
                     # Add medal for top 3
-                    medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+                    medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, '')
 
                     lines.append(
-                        f"{medal} {player_name} - "
+                        f"{i}. {player_name} {medal} - "
                         f"{player['wins']}W/{player['draws']}D/{player['losses']}L "
                         f"({player['win_rate']}% sur {player['total_games']} parties)"
                     )
@@ -180,7 +180,11 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        self.wfile.write(b'')
+        self.wfile.write(json.dumps({
+                'response_type': 'in_channel',
+                'blocks': blocks if not text else None,
+                'text': text if text else None
+            }).encode('utf-8'))
 
         # Send delayed response with leaderboard
         requests.post(
