@@ -228,4 +228,3 @@ def format_leaderboard_blocks(leaderboard, unranked) -> List[Dict]:
             })
     
     return blocks
-        return
