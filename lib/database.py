@@ -342,7 +342,7 @@ def get_leaderboard():
                 ) all_results
                 GROUP BY player_id, player_name
             ) p
-            WHERE p.total_games > 0
+            WHERE p.total_games >= 5
         )
         SELECT 
             player_id,
