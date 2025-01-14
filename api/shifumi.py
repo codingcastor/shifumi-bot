@@ -12,8 +12,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger('shifumi.game')
 from lib.database import (
-    init_tables, get_pending_game, create_game, update_game,
-    get_pending_challenge, get_nickname, set_nickname
+    init_tables, create_game,
+    get_pending_challenge, get_nickname
 )
 from lib.slack import verify_slack_request
 from lib.types import Gesture
@@ -74,6 +74,18 @@ class handler(BaseHTTPRequestHandler):
                 response = {
                     'response_type': 'ephemeral',
                     'text': f"Geste invalide ! Valeurs possibles : :rock:, :leaves:, :scissors: (ou PIERRE, FEUILLE, CISEAUX)"
+                }
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
+
+            # Prevent self-challenge
+            if target_user == slack_params['user_id']:
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
+                    'response_type': 'ephemeral',
+                    'text': "Tu ne peux pas te défier toi-même !"
                 }
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 return
