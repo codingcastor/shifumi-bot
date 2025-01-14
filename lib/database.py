@@ -516,3 +516,21 @@ def get_leaderboard():
         }
         for row in results
     ]
+
+
+def get_game_by_id(game_id):
+    """Get a game by its ID.
+    Returns (game_id, player1_id, player1_move, player2_id, player2_move) if found, None otherwise"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT id, player1_id, player1_move, player2_id, player2_move
+        FROM games 
+        WHERE id = %s
+        AND status = 'pending'
+        LIMIT 1
+    ''', (game_id,))
+    game = cur.fetchone()
+    cur.close()
+    conn.close()
+    return game

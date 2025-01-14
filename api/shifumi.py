@@ -1,6 +1,6 @@
 import json
 import logging
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import requests
 from urllib.parse import parse_qs
 import os
@@ -100,7 +100,7 @@ class handler(BaseHTTPRequestHandler):
             else:
                 # This is a new challenge
                 logger.info(f"Creating new challenge game with move {move.value}")
-                create_game(
+                game_id = create_game(
                     slack_params['channel_id'],
                     slack_params['channel_name'],
                     slack_params['user_id'],
@@ -131,7 +131,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '🪨 Pierre',
                                         'emoji': True
                                     },
-                                    'value': f'{slack_params["user_id"]} PIERRE',
+                                    'value': f'{game_id}',
                                     'action_id': 'play_rock'
                                 },
                                 {
@@ -141,7 +141,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '🍃 Feuille',
                                         'emoji': True
                                     },
-                                    'value': f'{slack_params["user_id"]} FEUILLE',
+                                    'value': f'{game_id}',
                                     'action_id': 'play_paper'
                                 },
                                 {
@@ -151,7 +151,7 @@ class handler(BaseHTTPRequestHandler):
                                         'text': '✂️ Ciseaux',
                                         'emoji': True
                                     },
-                                    'value': f'{slack_params["user_id"]} CISEAUX',
+                                    'value': f'{game_id}',
                                     'action_id': 'play_scissors'
                                 }
                             ]
@@ -180,7 +180,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(str(response), 'utf-8'))
             return
             # Start new game
-        create_game(
+        game_id = create_game(
             slack_params['channel_id'],
             slack_params['channel_name'],
             slack_params['user_id'],
@@ -208,7 +208,7 @@ class handler(BaseHTTPRequestHandler):
                                 'text': '🪨 Pierre',
                                 'emoji': True
                             },
-                            'value': 'PIERRE',
+                            'value': f'{game_id}',
                             'action_id': 'play_rock'
                         },
                         {
@@ -218,7 +218,7 @@ class handler(BaseHTTPRequestHandler):
                                 'text': '🍃 Feuille',
                                 'emoji': True
                             },
-                            'value': 'FEUILLE',
+                            'value': f'{game_id}',
                             'action_id': 'play_paper'
                         },
                         {
@@ -228,7 +228,7 @@ class handler(BaseHTTPRequestHandler):
                                 'text': '✂️ Ciseaux',
                                 'emoji': True
                             },
-                            'value': 'CISEAUX',
+                            'value': f'{game_id}',
                             'action_id': 'play_scissors'
                         }
                     ]
@@ -247,3 +247,8 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(b'')
 
         return
+
+
+if __name__ == '__main__':
+    server = HTTPServer(('0.0.0.0', 8080), handler)
+    server.serve_forever()

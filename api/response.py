@@ -1,6 +1,6 @@
 import json
 import logging
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import os
 from urllib.parse import parse_qs
 import requests
@@ -14,7 +14,7 @@ logger = logging.getLogger('shifumi.response')
 
 from lib.database import (
     init_tables, get_pending_game, update_game,
-    get_pending_challenge, get_nickname
+    get_pending_challenge, get_nickname, get_game_by_id
 )
 from lib.slack import verify_slack_request
 from lib.types import Gesture
@@ -80,55 +80,62 @@ class handler(BaseHTTPRequestHandler):
             logger.info(f'Player {user_id} chose move: {move.value}')
 
             # Handle challenge response
-            if ' ' in action_value:  # Format: "userid MOVE"
-                challenger_id = action_value.split()[0]
-                logger.info(f'Processing challenge response against {challenger_id}')
-                # Get pending challenge
-                pending_challenge = get_pending_challenge(challenger_id, user_id)
-                logger.info(f'Found pending challenge: {pending_challenge is not None}')
-                
-                if pending_challenge:
-                    game_id, challenger_id, challenger_move = pending_challenge
-                    challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
-                    
-                    # Complete the challenge
-                    update_game(game_id, user_id, user_name, move.value)
-                    logger.info(f'Updated game {game_id} with move {move.value}')
-                    
-                    # Determine winner
-                    move1 = Gesture(challenger_move)
-                    move2 = move
-                    logger.info(f'Game {game_id}: {move1.value} vs {move2.value}')
-                    
-                    if move1 == move2:
-                        result = "Egalité !"
-                    elif (
-                            (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
-                            (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
-                            (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
-                    ):
-                        result = f"{challenger_nickname} gagne !"
-                    else:
-                        result = f"{user_nickname} gagne !"
-
-                    response_message = {
-                        'response_type': 'in_channel',
-                        'text': f"Résultat du défi:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
-                        'replace_original': True
-                    }
-                else:
-                    response_message = {
-                        'response_type': 'ephemeral',
-                        'text': "Défi non trouvé ou expiré.",
-                        'replace_original': False
-                    }
+            game_id = int(action_value.split()[0])
+            logger.info(f'Processing game response for game {game_id}')
             
-            # Handle regular game response
+            # Get game
+            game = get_game_by_id(game_id)
+            logger.info(f'Found game: {game is not None}')
+            
+            if not game:
+                response_message = {
+                    'response_type': 'in_channel',
+                    'text': "Partie non trouvée ou expirée.",
+                    'replace_original': True
+                }
             else:
-                pending_game = get_pending_game(channel_id)
+                if target_id is not None:
+                    game_id, challenger_id, challenger_move, target_id, _ = game
+                    
+                    # For challenges (where target_id is set), verify the user is the target
+                    if target_id != user_id:
+                        response_message = {
+                            'response_type': 'ephemeral',
+                            'text': "Ce défi ne t'est pas destiné !",
+                            'replace_original': False
+                        }
+                    else:
+                        challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
+                        
+                        # Complete the game
+                        update_game(game_id, user_id, user_name, move.value)
+                        logger.info(f'Updated game {game_id} with move {move.value}')
+                        
+                        # Determine winner
+                        move1 = Gesture(challenger_move)
+                        move2 = move
+                        logger.info(f'Game {game_id}: {move1.value} vs {move2.value}')
+                        
+                        if move1 == move2:
+                            result = "Egalité !"
+                        elif (
+                                (move1 == Gesture.ROCK and move2 == Gesture.SCISSORS) or
+                                (move1 == Gesture.PAPER and move2 == Gesture.ROCK) or
+                                (move1 == Gesture.SCISSORS and move2 == Gesture.PAPER)
+                        ):
+                            result = f"{challenger_nickname} gagne !"
+                        else:
+                            result = f"{user_nickname} gagne !"
+
+                        response_message = {
+                            'response_type': 'in_channel',
+                            'text': f"Résultat {'du défi' if target_id else ''}:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
+                            'replace_original': True
+                        }
                 
-                if pending_game:
-                    game_id, player1_id, player1_move, _, _ = pending_game
+                # Handle regular game response
+                else:
+                    game_id, player1_id, player1_move, _, _ = game
                     
                     if player1_id == user_id:
                         response_message = {
@@ -162,12 +169,6 @@ class handler(BaseHTTPRequestHandler):
                             'text': f"Résultat:\n{player1_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
                             'replace_original': True
                         }
-                else:
-                    response_message = {
-                        'response_type': 'in_channel',
-                        'text': "Partie non trouvée ou expirée.",
-                        'replace_original': True
-                    }
 
             # Send response
             logger.info(f'Sending response to Slack: {response_message["text"][:100]}...')
@@ -191,3 +192,8 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
         return
+
+
+if __name__ == '__main__':
+    server = HTTPServer(('0.0.0.0', 8080), handler)
+    server.serve_forever()
