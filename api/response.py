@@ -87,6 +87,7 @@ class handler(BaseHTTPRequestHandler):
             game = get_game_by_id(game_id)
             logger.info(f'Found game: {game is not None}')
             
+            
             if not game:
                 response_message = {
                     'response_type': 'in_channel',
@@ -94,6 +95,7 @@ class handler(BaseHTTPRequestHandler):
                     'replace_original': True
                 }
             else:
+                target_id = game[3]
                 if target_id is not None:
                     game_id, challenger_id, challenger_move, target_id, _ = game
                     
