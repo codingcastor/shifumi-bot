@@ -1,6 +1,6 @@
 import json
 import logging
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
 import requests
@@ -192,8 +192,3 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
         return
-
-
-if __name__ == '__main__':
-    server = HTTPServer(('0.0.0.0', 8080), handler)
-    server.serve_forever()
