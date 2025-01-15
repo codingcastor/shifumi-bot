@@ -460,16 +460,15 @@ def get_leaderboard():
                 p.wins,
                 p.losses,
                 p.draws,
-                p.total_games,
-                ROUND(CAST(CAST(p.wins AS FLOAT) / NULLIF(p.total_games, 0) * 100 AS numeric), 1) as win_rate
+                p.wins + p.losses as total_games,
+                ROUND(CAST(CAST(p.wins AS FLOAT) / (NULLIF(p.wins, 0)+NULLIF(p.losses, 0)) * 100 AS numeric), 1) as win_rate
             FROM (
                 SELECT 
                     player_id,
                     player_name,
                     COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
                     COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
-                    COUNT(CASE WHEN result IS NULL THEN 1 END) as losses,
-                    COUNT(*) as total_games
+                    COUNT(CASE WHEN result IS NULL THEN 1 END) as losses
                 FROM (
                     SELECT winner_id as player_id, winner_name as player_name, result FROM game_results
                     UNION ALL
@@ -477,7 +476,7 @@ def get_leaderboard():
                 ) all_results
                 GROUP BY player_id, player_name
             ) p
-            WHERE p.total_games >= 5
+            WHERE p.wins + p.losses + p.draws >= 5
         )
         SELECT 
             player_id,
@@ -485,10 +484,9 @@ def get_leaderboard():
             wins,
             losses,
             draws,
-            total_games,
             win_rate
         FROM player_stats
-        ORDER BY win_rate DESC, wins DESC,total_games DESC
+        ORDER BY win_rate DESC, wins DESC, total_games DESC
     ''')
 
     results = cur.fetchall()
@@ -502,8 +500,7 @@ def get_leaderboard():
             'wins': row[2],
             'losses': row[3],
             'draws': row[4],
-            'total_games': row[5],
-            'win_rate': row[6]
+            'win_rate': row[5]
         }
         for row in results
     ]

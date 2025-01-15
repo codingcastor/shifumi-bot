@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs
 
 import requests
@@ -149,11 +149,11 @@ class handler(BaseHTTPRequestHandler):
 
                         # Add medal for top 3
                         medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, '')
-
+                        total_games = player['wins'] + player['losses'] + player['draws']
                         lines.append(
                             f"{i}. {player_name} {medal} - "
-                            f"{player['wins']}W/{player['draws']}D/{player['losses']}L "
-                            f"({player['win_rate']}% sur {player['total_games']} parties)"
+                            f"{player['wins']}W/{player['losses']}L "
+                            f"({player['win_rate']}% sur {total_games} parties)"
                         )
 
                 # Format unranked players
@@ -169,7 +169,6 @@ class handler(BaseHTTPRequestHandler):
                             f"{player['games_played']}/5 parties jouées "
                             f"(encore {player['games_needed']} parties)"
                         )
-
                 if not leaderboard and not unranked:
                     text = "Aucune partie jouée cette année ! 😢"
                     blocks = None
@@ -211,3 +210,7 @@ class handler(BaseHTTPRequestHandler):
 
         return
 
+
+if __name__ == '__main__':
+    server = HTTPServer(('localhost', 8080), handler)
+    server.serve_forever()
