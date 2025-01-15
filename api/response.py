@@ -110,7 +110,12 @@ class handler(BaseHTTPRequestHandler):
                 target_id = game[3]
                 if target_id is not None:
                     game_id, challenger_id, challenger_move, target_id, _ = game
-
+                    if challenger_id == user_id:
+                        response_message = {
+                            'response_type': 'ephemeral',
+                            'text': "C'est toi qui a lancé le défi patate",
+                            'replace_original': False
+                        }
                     # For challenges (where target_id is set), verify the user is the target
                     if target_id != user_id:
                         response_message = {
