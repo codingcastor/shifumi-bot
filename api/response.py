@@ -4,6 +4,10 @@ from http.server import BaseHTTPRequestHandler
 import os
 from urllib.parse import parse_qs
 import requests
+from typing import Dict, Optional
+
+# In-memory cache for nicknames
+_nickname_cache: Dict[str, Optional[str]] = {}
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +22,15 @@ from lib.database import (
 )
 from lib.slack import verify_slack_request
 from lib.types import Gesture
+
+
+def get_nickname_with_cache(user_id: str) -> Optional[str]:
+    # Check cache first
+    if user_id in _nickname_cache:
+        return _nickname_cache[user_id]
+    nickname = get_nickname(user_id)
+    _nickname_cache[user_id] = nickname
+    return nickname
 
 
 class handler(BaseHTTPRequestHandler):
@@ -39,21 +52,21 @@ class handler(BaseHTTPRequestHandler):
         # Parse form data
         params = parse_qs(post_data)
         payload = json.loads(params.get('payload', ['{}'])[0])
-        
+
         logger.info('Received interaction payload')
-        
+
         # Extract action data
         action = payload.get('actions', [{}])[0]
         action_id = action.get('action_id', '')
         action_value = action.get('value', '')
         logger.info(f'Action received: {action_id} with value: {action_value}')
-        
+
         # Extract user data
         user = payload.get('user', {})
         user_id = user.get('id')
         user_name = user.get('username')
         logger.info(f'User interaction from: {user_id} ({user_name})')
-        
+
         # Extract other context
         channel = payload.get('channel', {})
         channel_id = channel.get('id')
@@ -63,7 +76,7 @@ class handler(BaseHTTPRequestHandler):
         # Initialize tables if needed
         init_tables()
 
-        user_nickname = get_nickname(user_id) or f'<@{user_id}>'
+        user_nickname = get_nickname_with_cache(user_id) or f'<@{user_id}>'
 
         try:
             # Parse the move from action
@@ -76,18 +89,17 @@ class handler(BaseHTTPRequestHandler):
             else:
                 logger.error(f'Invalid action_id received: {action_id}')
                 raise ValueError("Invalid action")
-            
+
             logger.info(f'Player {user_id} chose move: {move.value}')
 
             # Handle challenge response
             game_id = int(action_value.split()[0])
             logger.info(f'Processing game response for game {game_id}')
-            
+
             # Get game
             game = get_game_by_id(game_id)
             logger.info(f'Found game: {game is not None}')
-            
-            
+
             if not game:
                 response_message = {
                     'response_type': 'in_channel',
@@ -98,7 +110,7 @@ class handler(BaseHTTPRequestHandler):
                 target_id = game[3]
                 if target_id is not None:
                     game_id, challenger_id, challenger_move, target_id, _ = game
-                    
+
                     # For challenges (where target_id is set), verify the user is the target
                     if target_id != user_id:
                         response_message = {
@@ -107,17 +119,17 @@ class handler(BaseHTTPRequestHandler):
                             'replace_original': False
                         }
                     else:
-                        challenger_nickname = get_nickname(challenger_id) or f'<@{challenger_id}>'
-                        
+                        challenger_nickname = get_nickname_with_cache(challenger_id) or f'<@{challenger_id}>'
+
                         # Complete the game
                         update_game(game_id, user_id, user_name, move.value)
                         logger.info(f'Updated game {game_id} with move {move.value}')
-                        
+
                         # Determine winner
                         move1 = Gesture(challenger_move)
                         move2 = move
                         logger.info(f'Game {game_id}: {move1.value} vs {move2.value}')
-                        
+
                         if move1 == move2:
                             result = "Egalité !"
                         elif (
@@ -134,11 +146,11 @@ class handler(BaseHTTPRequestHandler):
                             'text': f"Résultat {'du défi' if target_id else ''}:\n{challenger_nickname} a joué {move1.emoji}\n{user_nickname} a joué {move2.emoji}\n{result}",
                             'replace_original': True
                         }
-                
+
                 # Handle regular game response
                 else:
                     game_id, player1_id, player1_move, _, _ = game
-                    
+
                     if player1_id == user_id:
                         response_message = {
                             'response_type': 'ephemeral',
@@ -148,13 +160,13 @@ class handler(BaseHTTPRequestHandler):
                     else:
                         # Complete the game
                         update_game(game_id, user_id, user_name, move.value)
-                        
-                        player1_nickname = get_nickname(player1_id) or f'<@{player1_id}>'
-                        
+
+                        player1_nickname = get_nickname_with_cache(player1_id) or f'<@{player1_id}>'
+
                         # Determine winner
                         move1 = Gesture(player1_move)
                         move2 = move
-                        
+
                         if move1 == move2:
                             result = "Egalité !"
                         elif (
@@ -175,13 +187,13 @@ class handler(BaseHTTPRequestHandler):
             # Send response
             logger.info(f'Sending response to Slack: {response_message["text"][:100]}...')
             requests.post(response_url, json=response_message)
-            
+
             # Send immediate empty 200 response
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'')
             logger.info('Request completed successfully')
-            
+
         except Exception as e:
             logger.error(f'Error processing request: {str(e)}', exc_info=True)
             self.send_response(200)
