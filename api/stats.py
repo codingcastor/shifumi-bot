@@ -12,7 +12,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger('shifumi.stats')
 
-from lib.database import init_tables, get_move_stats
+from lib.database import init_tables, get_move_stats, get_nickname, get_player_stats
 from lib.slack import verify_slack_request
 from lib.types import Gesture
 
@@ -48,11 +48,21 @@ class handler(BaseHTTPRequestHandler):
         init_tables()
 
         try:
+            # Check if a user was specified
+            text = slack_params.get('text', '').strip()
+            target_user_id = None
+            user_name = None
+            
+            if text and text.startswith('<@'):
+                # Extract user ID from mention
+                target_user_id = text[2:-1].split('|')[0]
+                user_name = get_nickname(target_user_id) or f"<@{target_user_id}>"
+            
             # Get move statistics
-            stats = get_move_stats()
+            stats = get_player_stats(target_user_id) if (target_user_id is not None) else get_move_stats()
             
             if not stats:
-                text = "Aucune partie jouée cette année ! 😢"
+                text = f"{'Ce joueur' if target_user_id else 'Personne'} n'a pas encore joué cette année ! 😢"
                 blocks = None
             else:
                 # Create blocks for better formatting
@@ -61,7 +71,7 @@ class handler(BaseHTTPRequestHandler):
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": "📊 Statistiques des coups joués 📊",
+                            "text": f"📊 Statistiques des coups joués{' par ' + user_name if user_name else ''} 📊",
                             "emoji": True
                         }
                     }

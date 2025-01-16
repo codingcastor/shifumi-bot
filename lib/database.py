@@ -114,14 +114,14 @@ def get_pending_challenge(challenger_id, opponent_id):
 
 def get_nickname(user_id):
     """Get a user's nickname if it exists"""
-        
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('SELECT nickname FROM nicknames WHERE user_id = %s', (user_id,))
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     # Update cache and return
     nickname = result[0] if result else None
     return nickname
@@ -528,7 +528,7 @@ def get_move_stats():
     """Get statistics about moves played in the current year"""
     conn = get_db_connection()
     cur = conn.cursor()
-    
+
     cur.execute('''
         WITH game_results as (
             SELECT player1_move as move,
@@ -554,13 +554,90 @@ def get_move_stats():
         GROUP BY move
         ORDER BY total_games DESC
     ''')
-    
+
     results = cur.fetchall()
     cur.close()
     conn.close()
-    
+
     total_games = sum(row[4] for row in results)
-    
+
+    return [
+        {
+            'move': row[0],
+            'wins': row[1],
+            'losses': row[2],
+            'draws': row[3],
+            'total_games': row[4],
+            'win_rate': round(row[1] / row[4] * 100, 1) if row[4] > 0 else 0,
+            'play_rate': round(row[4] / total_games * 100, 1) if total_games > 0 else 0
+        }
+        for row in results
+    ]
+
+
+def get_player_stats(user_id):
+    """Get statistics about moves played in the current year.
+     If user_id is provided, only get stats for that specific user."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = '''
+        WITH game_results as (
+            -- First player moves
+            SELECT player1_move as move,
+                   CASE
+                       WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                             (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                             (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                       WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                             (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                             (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                       ELSE 'DRAW'
+                       END      as result
+            FROM games
+            WHERE status = 'complete'
+              AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+              {}
+            UNION ALL
+            -- Second player moves
+            SELECT player2_move as move,
+                   CASE
+                       WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                             (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                             (player2_move = 'SCISSORS' AND player1_move = 'PAPER')) THEN 'WIN'
+                       WHEN ((player2_move = 'ROCK' AND player1_move = 'PAPER') OR
+                             (player2_move = 'PAPER' AND player1_move = 'SCISSORS') OR
+                             (player2_move = 'SCISSORS' AND player1_move = 'ROCK')) THEN 'LOSS'
+                       ELSE 'DRAW'
+                       END      as result
+            FROM games
+            WHERE status = 'complete'
+              AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+              {}
+        )
+        SELECT move,
+               COUNT(CASE WHEN result = 'WIN' THEN 1 END)  as wins,
+               COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
+               COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+               count(*)                                    as total_games
+        FROM game_results
+        GROUP BY move
+        ORDER BY total_games DESC
+    '''
+
+    query = query.format(
+        'AND player1_id = %s',
+        'AND player2_id = %s'
+    )
+    params = [user_id, user_id]
+
+    cur.execute(query, params)
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    total_games = sum(row[4] for row in results)
+
     return [
         {
             'move': row[0],
