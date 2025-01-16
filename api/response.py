@@ -102,9 +102,9 @@ class handler(BaseHTTPRequestHandler):
 
             if not game:
                 response_message = {
-                    'response_type': 'in_channel',
+                    'response_type': 'ephemeral',
                     'text': "Partie non trouvée ou expirée.",
-                    'replace_original': True
+                    'replace_original': False
                 }
             else:
                 target_id = game[3]
