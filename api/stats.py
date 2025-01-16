@@ -38,6 +38,7 @@ class handler(BaseHTTPRequestHandler):
         # Extract Slack command parameters
         slack_params = {
             'command': params.get('command', [''])[0],
+            'text': params.get('text', [''])[0],
             'response_url': params.get('response_url', [''])[0],
             'user_id': params.get('user_id', [''])[0],
         }
