@@ -522,3 +522,54 @@ def get_game_by_id(game_id):
     cur.close()
     conn.close()
     return game
+
+
+def get_move_stats():
+    """Get statistics about moves played in the current year"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute('''
+        WITH game_results as (
+            SELECT player1_move as move,
+                   CASE
+                       WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                             (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                             (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                       WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                             (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                             (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                       ELSE 'DRAW'
+                       END      as result
+            FROM games
+            WHERE status = 'complete'
+              AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+        )
+        SELECT move,
+               COUNT(CASE WHEN result = 'WIN' THEN 1 END)  as wins,
+               COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
+               COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+               count(*)                                    as total_games
+        FROM game_results
+        GROUP BY move
+        ORDER BY total_games DESC
+    ''')
+    
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    total_games = sum(row[4] for row in results)
+    
+    return [
+        {
+            'move': row[0],
+            'wins': row[1],
+            'losses': row[2],
+            'draws': row[3],
+            'total_games': row[4],
+            'win_rate': round(row[1] / row[4] * 100, 1) if row[4] > 0 else 0,
+            'play_rate': round(row[4] / total_games * 100, 1) if total_games > 0 else 0
+        }
+        for row in results
+    ]
