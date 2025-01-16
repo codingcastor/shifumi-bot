@@ -70,22 +70,12 @@ class handler(BaseHTTPRequestHandler):
             
             if not stats:
                 text = f"{'Ce joueur' if target_user_id else 'Personne'} n'a pas encore joué cette année ! 😢"
-                blocks = None
                 logger.info(f"No stats found: {text}")
             else:
                 logger.info(f"Stats breakdown: {', '.join([f'{stat['move']}: {stat['total_games']} games' for stat in stats])}")
                 
-                # Create blocks for better formatting
-                blocks = [
-                    {
-                        "type": "header",
-                        "text": {
-                            "type": "plain_text",
-                            "text": f"📊 Statistiques des coups joués{' par ' + user_name if user_name else ''} 📊",
-                            "emoji": True
-                        }
-                    }
-                ]
+                # Create text output
+                lines = [f"📊 *Statistiques des coups joués{' par ' + user_name if user_name else ''}* 📊\n"]
                 
                 # Add stats for each move
                 for move_stat in stats:
@@ -93,30 +83,22 @@ class handler(BaseHTTPRequestHandler):
                     logger.info(f"Processing stats for {move.value}: "
                               f"W/L/D: {move_stat['wins']}/{move_stat['losses']}/{move_stat['draws']} "
                               f"(Win rate: {move_stat['win_rate']}%, Play rate: {move_stat['play_rate']}%)")
-                    blocks.append({
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": (
-                                f"*{move.emoji} {move.value} ({move_stat['play_rate']}%)*\n"
-                                f"• Victoires: `{move_stat['wins']}` ({move_stat['win_rate']}%)\n"
-                                f"• Défaites: `{move_stat['losses']}`\n"
-                                f"• Egalités: `{move_stat['draws']}`\n"
-                                f"• Total: `{move_stat['total_games']}` parties"
-                            )
-                        }
-                    })
+                    
+                    lines.extend([
+                        f"{move.emoji} *{move.value}* ({move_stat['play_rate']}% des coups) - "
+                        f"`{move_stat['wins']}W/{move_stat['losses']}L/{move_stat['draws']}D` "
+                        f"(WR: {move_stat['win_rate']}%)"
+                    ])
                 
-                text = None  # Fallback text not needed with blocks
+                text = "\n".join(lines)
 
             response_message = {
                 'response_type': 'in_channel',
-                'blocks': blocks if not text else None,
-                'text': text if text else None
+                'text': text
             }
 
             # Send response
-            logger.info(f"Sending response to Slack with {len(blocks) if blocks else 0} blocks")
+            logger.info(f"Sending response to Slack")
             requests.post(slack_params['response_url'], json=response_message)
 
             # Send immediate empty 200 response
