@@ -12,7 +12,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger('shifumi.stats')
 
-from lib.database import init_tables, get_move_stats, get_nickname, get_player_stats
+from lib.database import get_player_stats, init_tables, get_move_stats, get_nickname
 from lib.slack import verify_slack_request
 from lib.types import Gesture
 
@@ -53,18 +53,27 @@ class handler(BaseHTTPRequestHandler):
             target_user_id = None
             user_name = None
             
+            logger.info(f"Command text received: '{text}'")
+            
             if text and text.startswith('<@'):
                 # Extract user ID from mention
                 target_user_id = text[2:-1].split('|')[0]
+                logger.info(f"Computing stats for specific user: {target_user_id}")
                 user_name = get_nickname(target_user_id) or f"<@{target_user_id}>"
+                logger.info(f"User nickname resolved to: {user_name}")
+            else:
+                logger.info("Computing global stats for all users")
             
             # Get move statistics
-            stats = get_player_stats(target_user_id) if (target_user_id is not None) else get_move_stats()
+            stats = get_player_stats(target_user_id) if target_user_id else get_move_stats()
             
             if not stats:
                 text = f"{'Ce joueur' if target_user_id else 'Personne'} n'a pas encore joué cette année ! 😢"
                 blocks = None
+                logger.info(f"No stats found: {text}")
             else:
+                logger.info(f"Stats breakdown: {', '.join([f'{stat['move']}: {stat['total_games']} games' for stat in stats])}")
+                
                 # Create blocks for better formatting
                 blocks = [
                     {
@@ -80,6 +89,9 @@ class handler(BaseHTTPRequestHandler):
                 # Add stats for each move
                 for move_stat in stats:
                     move = Gesture(move_stat['move'])
+                    logger.info(f"Processing stats for {move.value}: "
+                              f"W/L/D: {move_stat['wins']}/{move_stat['losses']}/{move_stat['draws']} "
+                              f"(Win rate: {move_stat['win_rate']}%, Play rate: {move_stat['play_rate']}%)")
                     blocks.append({
                         "type": "section",
                         "text": {
@@ -103,7 +115,7 @@ class handler(BaseHTTPRequestHandler):
             }
 
             # Send response
-            logger.info(f'Sending response to Slack')
+            logger.info(f"Sending response to Slack with {len(blocks) if blocks else 0} blocks")
             requests.post(slack_params['response_url'], json=response_message)
 
             # Send immediate empty 200 response
