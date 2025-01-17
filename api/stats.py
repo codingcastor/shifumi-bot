@@ -96,7 +96,9 @@ class handler(BaseHTTPRequestHandler):
                     
                     if show_breakdown:
                         # Add detailed breakdown stats for each move
+                        print(stats['moves'])
                         for move_name in stats['moves']:
+                            print(move_name)
                             move = Gesture(move_name)
                             move_stats = stats['moves'][move_name]
                             
