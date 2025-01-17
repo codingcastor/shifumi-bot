@@ -1005,7 +1005,7 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                     opponent_move,
                     play_order,
                     COUNT(*) as times_played,
-                     COUNT(CASE WHEN result = 'WIN' THEN 1 END)::float / COUNT(*) as win_rate
+                    COALESCE(COUNT(CASE WHEN result = 'LOSS' THEN 1 END)::float / NULLIF(COUNT(CASE WHEN result <> 'DRAW' THEN 1 END)::float, 0),0) as win_rate
                 FROM game_results
                 GROUP BY  play_order, opponent_move
                 ORDER BY win_rate DESC, times_played DESC
