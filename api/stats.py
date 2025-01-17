@@ -96,8 +96,16 @@ class handler(BaseHTTPRequestHandler):
                             f"(WR: {move_stat['win_rate']}%)"
                         )
                     
-                    # Add opponent analysis
-                    if stats['opponent_favorite']:
+                    # Add opponent analysis with special case for Irene
+                    if player2_id == "U05QD315XTP":  # Irene's user ID
+                        lines.extend([
+                            "",
+                            "🤔 *Analyse de l'adversaire*",
+                            "Irène est imprévisible, elle joue en 4D chess...",
+                            "Même ChatGPT ne peut pas prédire ses coups !",
+                            "Bonne chance ! 🎲"
+                        ])
+                    elif stats['opponent_favorite']:
                         opp_move = Gesture(stats['opponent_favorite'])
                         counter = Gesture(stats['recommended_counter'])
                         lines.extend([
