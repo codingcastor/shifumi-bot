@@ -568,7 +568,7 @@ def get_move_stats():
             'losses': row[2],
             'draws': row[3],
             'total_games': row[4],
-            'win_rate': round(row[1] / row[4] * 100, 1) if row[4] > 0 else 0,
+            'win_rate': round(row[1] / (row[1] + row[2]) * 100, 1) if row[4] > 0 else 0,
             'play_rate': round(row[4] / total_games * 100, 1) if total_games > 0 else 0
         }
         for row in results
@@ -645,7 +645,7 @@ def get_player_stats(user_id):
             'losses': row[2],
             'draws': row[3],
             'total_games': row[4],
-            'win_rate': round(row[1] / row[4] * 100, 1) if row[4] > 0 else 0,
+            'win_rate': round(row[1] / (row[1] + row[2]) * 100, 1) if row[4] > 0 else 0,
             'play_rate': round(row[4] / total_games * 100, 1) if total_games > 0 else 0
         }
         for row in results
