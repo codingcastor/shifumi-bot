@@ -964,7 +964,7 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                 -- Games where player1 is first player
                 SELECT 
                     player1_move as move,
-                    'FIRST' as play_order,
+                    'SECOND' as play_order,
                     CASE
                         WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
                               (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
@@ -978,13 +978,13 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                 FROM games
                 WHERE status = 'complete'
                     AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-                    AND player2_id = %s
                     AND player1_id = %s
+                    AND player2_id = %s
                 UNION ALL
                 -- Games where player1 is second player
                 SELECT 
                     player2_move as move,
-                    'SECOND' as play_order,
+                    'FIRST' as play_order,
                     CASE
                         WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
                               (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
@@ -998,8 +998,8 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                 FROM games
                 WHERE status = 'complete'
                     AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-                    AND player2_id = %s
                     AND player1_id = %s
+                    AND player2_id = %s
             )
              SELECT
                     opponent_move,
@@ -1019,7 +1019,7 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
         move = row[0]  # opponent_move
         times_played = row[2]  # times_played
         move_totals[move] = move_totals.get(move, 0) + times_played
-    
+    print(move_totals)
     # Find the most played move
     opponent_move = max(move_totals.items(), key=lambda x: x[1])[0] if move_totals else None
     
