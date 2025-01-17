@@ -143,18 +143,17 @@ class handler(BaseHTTPRequestHandler):
                         # Add strategy analysis
                         lines.append("\n🎯 *Analyse stratégique*")
                         
-                        if stats['opponent_favorite']:
+                        if 'opponent_favorite' in stats:
                             opp_move = Gesture(stats['opponent_favorite'])
                             lines.append(f"• {player2_name} joue souvent {opp_move.emoji} *{opp_move.value}*")
                         
-                        if stats['best_opener']:
+                        if 'best_opener' in stats:
                             opener = Gesture(stats['best_opener'])
                             lines.append(f"• Meilleur coup d'ouverture: {opener.emoji} *{opener.value}*")
                         
-                        if stats['best_counter'] and stats['best_counter_against']:
+                        if 'best_counter' in stats:
                             counter = Gesture(stats['best_counter'])
-                            against = Gesture(stats['best_counter_against'])
-                            lines.append(f"• Meilleur contre: {counter.emoji} *{counter.value}* contre {against.emoji} *{against.value}*")
+                            lines.append(f"• Meilleur contre: {counter.emoji} *{counter.value}*")
                     
                     text = "\n".join(lines)
             
