@@ -939,7 +939,7 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
     if not results:
         return None
 
-    total_games = sum(row[5] for row in results) // 2  # Divide by 2 since each game is counted twice (first/second)
+    total_games = sum(row[5] for row in results)
 
     # Group results by move
     stats = {}
@@ -978,8 +978,8 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                 FROM games
                 WHERE status = 'complete'
                     AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-                    AND player1_id = %s
                     AND player2_id = %s
+                    AND player1_id = %s
                 UNION ALL
                 -- Games where player1 is second player
                 SELECT 
@@ -998,14 +998,14 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                 FROM games
                 WHERE status = 'complete'
                     AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-                    AND player1_id = %s
                     AND player2_id = %s
+                    AND player1_id = %s
             )
              SELECT
                     opponent_move,
                     play_order,
                     COUNT(*) as times_played,
-                    COALESCE(COUNT(CASE WHEN result = 'LOSS' THEN 1 END)::float / NULLIF(COUNT(CASE WHEN result <> 'DRAW' THEN 1 END)::float, 0),0) as win_rate
+                    COALESCE(COUNT(CASE WHEN result = 'WIN' THEN 1 END)::float / NULLIF(COUNT(CASE WHEN result <> 'DRAW' THEN 1 END)::float, 0),0) as win_rate
                 FROM game_results
                 GROUP BY  play_order, opponent_move
                 ORDER BY win_rate DESC, times_played DESC
