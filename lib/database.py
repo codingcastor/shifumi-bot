@@ -765,3 +765,278 @@ def get_head_to_head_stats(player1_id, player2_id):
         'recommended_counter': counter_strategy,
         'total_games': total_games
     }
+
+
+def get_move_stats_breakdown(user_id=None):
+    """Get statistics about moves played in the current year, broken down by play order.
+    If user_id is provided, only get stats for that specific user."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    query = '''
+        WITH first_player_moves AS (
+            SELECT 
+                player1_move as move,
+                'FIRST' as play_order,
+                CASE
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                          (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                {}
+        ),
+        second_player_moves AS (
+            SELECT 
+                player2_move as move,
+                'SECOND' as play_order,
+                CASE
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'PAPER') OR
+                          (player2_move = 'PAPER' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                {}
+        ),
+        all_moves AS (
+            SELECT * FROM first_player_moves
+            UNION ALL
+            SELECT * FROM second_player_moves
+        )
+        SELECT 
+            move,
+            play_order,
+            COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
+            COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
+            COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+            COUNT(*) as total_games
+        FROM all_moves
+        GROUP BY move, play_order
+        ORDER BY move, play_order
+    '''
+    
+    if user_id:
+        query = query.format(
+            'AND player1_id = %s',
+            'AND player2_id = %s'
+        )
+        params = [user_id, user_id]
+    else:
+        query = query.format('', '')
+        params = []
+    
+    cur.execute(query, params)
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not results:
+        return None
+    
+    # Group results by move
+    stats = {}
+    for row in results:
+        move, play_order, wins, losses, draws, total = row
+        if move not in stats:
+            stats[move] = {'first': None, 'second': None}
+        
+        order_key = 'first' if play_order == 'FIRST' else 'second'
+        stats[move][order_key] = {
+            'wins': wins,
+            'losses': losses,
+            'draws': draws,
+            'total_games': total,
+            'win_rate': round(wins / total * 100, 1) if total > 0 else 0
+        }
+    
+    return stats
+
+
+def get_head_to_head_stats_breakdown(player1_id, player2_id):
+    """Get head-to-head statistics between two players with first/second player breakdown"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+        WITH game_results AS (
+            -- Games where player1 is first player
+            SELECT 
+                player1_move as move,
+                'FIRST' as play_order,
+                CASE
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                          (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result,
+                player2_move as opponent_move
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_id = %s
+                AND player2_id = %s
+            UNION ALL
+            -- Games where player1 is second player
+            SELECT 
+                player2_move as move,
+                'SECOND' as play_order,
+                CASE
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'PAPER') OR
+                          (player2_move = 'PAPER' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result,
+                player1_move as opponent_move
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_id = %s
+                AND player2_id = %s
+        ),
+        move_stats AS (
+            SELECT 
+                move,
+                play_order,
+                COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
+                COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
+                COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+                COUNT(*) as total_games
+            FROM game_results
+            GROUP BY move, play_order
+        )
+        SELECT 
+            m.move,
+            m.play_order,
+            m.wins,
+            m.losses,
+            m.draws,
+            m.total_games
+        FROM move_stats m
+        ORDER BY m.move, m.play_order
+    ''', (player1_id, player2_id, player2_id, player1_id))
+
+    results = cur.fetchall()
+    cur.close()
+
+    if not results:
+        return None
+
+    total_games = sum(row[5] for row in results) // 2  # Divide by 2 since each game is counted twice (first/second)
+
+    # Group results by move
+    stats = {}
+    for row in results:
+        move, play_order, wins, losses, draws, total = row[0:6]
+        if move not in stats:
+            stats[move] = {'first': None, 'second': None}
+
+        order_key = 'first' if play_order == 'FIRST' else 'second'
+        stats[move][order_key] = {
+            'wins': wins,
+            'losses': losses,
+            'draws': draws,
+            'total_games': total,
+            'win_rate': round(wins / total * 100, 1) if total > 0 else 0
+        }
+
+    cur = conn.cursor()
+
+    cur.execute('''
+            WITH game_results AS (
+                -- Games where player1 is first player
+                SELECT 
+                    player1_move as move,
+                    'FIRST' as play_order,
+                    CASE
+                        WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                              (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                              (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                        WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                              (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                              (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                        ELSE 'DRAW'
+                    END as result,
+                    player2_move as opponent_move
+                FROM games
+                WHERE status = 'complete'
+                    AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    AND player1_id = %s
+                    AND player2_id = %s
+                UNION ALL
+                -- Games where player1 is second player
+                SELECT 
+                    player2_move as move,
+                    'SECOND' as play_order,
+                    CASE
+                        WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                              (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                              (player2_move = 'SCISSORS' AND player1_move = 'PAPER')) THEN 'WIN'
+                        WHEN ((player2_move = 'ROCK' AND player1_move = 'PAPER') OR
+                              (player2_move = 'PAPER' AND player1_move = 'SCISSORS') OR
+                              (player2_move = 'SCISSORS' AND player1_move = 'ROCK')) THEN 'LOSS'
+                        ELSE 'DRAW'
+                    END as result,
+                    player1_move as opponent_move
+                FROM games
+                WHERE status = 'complete'
+                    AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    AND player1_id = %s
+                    AND player2_id = %s
+            )
+             SELECT
+                    opponent_move,
+                    play_order,
+                    COUNT(*) as times_played,
+                     COUNT(CASE WHEN result = 'WIN' THEN 1 END)::float / COUNT(*) as win_rate
+                FROM game_results
+                GROUP BY  play_order, opponent_move
+                ORDER BY win_rate DESC, times_played DESC
+        ''', (player1_id, player2_id, player2_id, player1_id))
+
+    results = cur.fetchall()
+    
+    # Sum times_played for each move across play orders
+    move_totals = {}
+    for row in results:
+        move = row[0]  # opponent_move
+        times_played = row[2]  # times_played
+        move_totals[move] = move_totals.get(move, 0) + times_played
+    
+    # Find the most played move
+    opponent_move = max(move_totals.items(), key=lambda x: x[1])[0] if move_totals else None
+    
+    best_opener = next((row[0] for row in results if row[1] == 'FIRST'), None)
+    best_counter = next((row[0] for row in results if row[1] == 'SECOND'), None)
+    
+    cur.close()
+
+    conn.close()
+
+    return {
+        'moves': stats,
+        'opponent_favorite': opponent_move,
+        'total_games': total_games,
+        'best_opener': best_opener,
+        'best_counter': best_counter,
+    }
+
+
+
