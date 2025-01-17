@@ -650,3 +650,118 @@ def get_player_stats(user_id):
         }
         for row in results
     ]
+
+
+def get_head_to_head_stats(player1_id, player2_id):
+    """Get head-to-head statistics between two players, from player1's perspective"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute('''
+        WITH game_results AS (
+            -- Games where player1 is player1_id
+            SELECT 
+                player1_move as move,
+                CASE
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'PAPER' AND player2_move = 'ROCK') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player1_move = 'ROCK' AND player2_move = 'PAPER') OR
+                          (player1_move = 'PAPER' AND player2_move = 'SCISSORS') OR
+                          (player1_move = 'SCISSORS' AND player2_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result,
+                player2_move as opponent_move
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_id = %s
+                AND player2_id = %s
+            UNION ALL
+            -- Games where player1 is player2_id (reverse perspective)
+            SELECT 
+                player2_move as move,
+                CASE
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'PAPER' AND player1_move = 'ROCK') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'PAPER')) THEN 'WIN'
+                    WHEN ((player2_move = 'ROCK' AND player1_move = 'PAPER') OR
+                          (player2_move = 'PAPER' AND player1_move = 'SCISSORS') OR
+                          (player2_move = 'SCISSORS' AND player1_move = 'ROCK')) THEN 'LOSS'
+                    ELSE 'DRAW'
+                END as result,
+                player1_move as opponent_move
+            FROM games
+            WHERE status = 'complete'
+                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND player1_id = %s
+                AND player2_id = %s
+        ),
+        move_stats AS (
+            SELECT 
+                move,
+                COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
+                COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
+                COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+                COUNT(*) as total_games
+            FROM game_results
+            GROUP BY move
+        ),
+        opponent_moves AS (
+            SELECT 
+                opponent_move,
+                COUNT(*) as times_played
+            FROM game_results
+            GROUP BY opponent_move
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        )
+        SELECT 
+            m.move,
+            m.wins,
+            m.losses,
+            m.draws,
+            m.total_games,
+            o.opponent_move as most_played_move,
+            o.times_played
+        FROM move_stats m
+        CROSS JOIN opponent_moves o
+        ORDER BY m.total_games DESC
+    ''', (player1_id, player2_id, player2_id, player1_id))
+    
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not results:
+        return None
+        
+    total_games = sum(row[4] for row in results)
+    opponent_move = results[0][5]  # Most played move by opponent
+    
+    # Determine recommended counter strategy based on opponent's most played move
+    counter_strategy = {
+        'ROCK': 'PAPER',
+        'PAPER': 'SCISSORS',
+        'SCISSORS': 'ROCK'
+    }.get(opponent_move) if opponent_move else None
+    
+    stats = [
+        {
+            'move': row[0],
+            'wins': row[1],
+            'losses': row[2],
+            'draws': row[3],
+            'total_games': row[4],
+            'win_rate': round(row[1] / row[4] * 100, 1) if row[4] > 0 else 0,
+            'play_rate': round(row[4] / total_games * 100, 1) if total_games > 0 else 0
+        }
+        for row in results
+    ]
+    
+    return {
+        'moves': stats,
+        'opponent_favorite': opponent_move,
+        'recommended_counter': counter_strategy,
+        'total_games': total_games
+    }

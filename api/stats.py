@@ -12,7 +12,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger('shifumi.stats')
 
-from lib.database import get_player_stats, init_tables, get_move_stats, get_nickname
+from lib.database import (
+    init_tables, get_move_stats, get_nickname,
+    get_player_stats, get_head_to_head_stats
+)
 from lib.slack import verify_slack_request
 from lib.types import Gesture
 
@@ -49,33 +52,83 @@ class handler(BaseHTTPRequestHandler):
         init_tables()
 
         try:
-            # Check if a user was specified
+            # Check if users are specified
             text = slack_params.get('text', '').strip()
-            target_user_id = None
-            user_name = None
-            
             logger.info(f"Command text received: '{text}'")
             
-            if text and text.startswith('<@'):
-                # Extract user ID from mention
-                target_user_id = text[2:-1].split('|')[0]
+            # Split text to check for multiple user mentions
+            mentions = [part for part in text.split() if part.startswith('<@')]
+            
+            if len(mentions) == 2:
+                # Head-to-head analysis
+                player1_id = mentions[0][2:-1].split('|')[0]
+                player2_id = mentions[1][2:-1].split('|')[0]
+                logger.info(f"Computing head-to-head stats between {player1_id} and {player2_id}")
+                
+                player1_name = get_nickname(player1_id) or f"<@{player1_id}>"
+                player2_name = get_nickname(player2_id) or f"<@{player2_id}>"
+                logger.info(f"Players resolved to: {player1_name} vs {player2_name}")
+                
+                stats = get_head_to_head_stats(player1_id, player2_id)
+                
+                if not stats:
+                    text = f"Aucune partie jouée entre {player1_name} et {player2_name} cette année ! 😢"
+                    logger.info(f"No head-to-head stats found")
+                else:
+                    logger.info(f"Found {stats['total_games']} games between players")
+                    logger.info(f"Opponent's favorite move: {stats['opponent_favorite']}")
+                    
+                    # Create text output
+                    lines = [
+                        f"🤼 *Stats de {player1_name} contre {player2_name}* 🤼\n",
+                        f"Total: `{stats['total_games']}` parties"
+                    ]
+                    
+                    # Add stats for each move
+                    for move_stat in stats['moves']:
+                        move = Gesture(move_stat['move'])
+                        logger.info(f"Processing stats for {move.value}: "
+                                  f"W/L/D: {move_stat['wins']}/{move_stat['losses']}/{move_stat['draws']}")
+                        
+                        lines.append(
+                            f"{move.emoji} *{move.value}* ({move_stat['play_rate']}%) - "
+                            f"`{move_stat['wins']}W/{move_stat['losses']}L/{move_stat['draws']}D` "
+                            f"(WR: {move_stat['win_rate']}%)"
+                        )
+                    
+                    # Add opponent analysis
+                    if stats['opponent_favorite']:
+                        opp_move = Gesture(stats['opponent_favorite'])
+                        counter = Gesture(stats['recommended_counter'])
+                        lines.extend([
+                            "",
+                            f"💡 {player2_name} joue souvent {opp_move.emoji} *{opp_move.value}*",
+                            f"👉 Essaie {counter.emoji} *{counter.value}* pour contrer !"
+                        ])
+                    
+                    text = "\n".join(lines)
+            
+            elif len(mentions) == 1:
+                # Single player stats
+                target_user_id = mentions[0][2:-1].split('|')[0]
                 logger.info(f"Computing stats for specific user: {target_user_id}")
                 user_name = get_nickname(target_user_id) or f"<@{target_user_id}>"
                 logger.info(f"User nickname resolved to: {user_name}")
+                
+                stats = get_player_stats(target_user_id)
             else:
+                # Global stats
                 logger.info("Computing global stats for all users")
+                stats = get_move_stats()
             
-            # Get move statistics
-            stats = get_player_stats(target_user_id) if target_user_id else get_move_stats()
-            
-            if not stats:
-                text = f"{'Ce joueur' if target_user_id else 'Personne'} n'a pas encore joué cette année ! 😢"
+            if not stats and len(mentions) <= 1:
+                text = f"{'Ce joueur' if mentions else 'Personne'} n'a pas encore joué cette année ! 😢"
                 logger.info(f"No stats found: {text}")
-            else:
+            elif len(mentions) <= 1 and stats:
                 logger.info(f"Stats breakdown: {', '.join([f'{stat['move']}: {stat['total_games']} games' for stat in stats])}")
                 
                 # Create text output
-                lines = [f"📊 *Statistiques des coups joués{' par ' + user_name if user_name else ''}* 📊\n"]
+                lines = [f"📊 *Statistiques des coups joués{' par ' + user_name if len(mentions) == 1 else ''}* 📊\n"]
                 
                 # Add stats for each move
                 for move_stat in stats:
@@ -84,11 +137,11 @@ class handler(BaseHTTPRequestHandler):
                               f"W/L/D: {move_stat['wins']}/{move_stat['losses']}/{move_stat['draws']} "
                               f"(Win rate: {move_stat['win_rate']}%, Play rate: {move_stat['play_rate']}%)")
                     
-                    lines.extend([
+                    lines.append(
                         f"{move.emoji} *{move.value}* ({move_stat['play_rate']}% des coups) - "
                         f"`{move_stat['wins']}W/{move_stat['losses']}L/{move_stat['draws']}D` "
                         f"(WR: {move_stat['win_rate']}%)"
-                    ])
+                    )
                 
                 text = "\n".join(lines)
 
