@@ -121,16 +121,15 @@ class handler(BaseHTTPRequestHandler):
                     target_user,
                     None  # We don't have the opponent's name yet
                 )
-                target_nickname = get_nickname(target_user) or f'<@{target_user}>'
                 delayed_response = {
                     'response_type': 'in_channel',
-                    'text': f"{user_nickname} défie {target_nickname} !",
+                    'text': f"{user_nickname} défie <@{target_user}> !",
                     'blocks': [
                         {
                             'type': 'section',
                             'text': {
                                 'type': 'mrkdwn',
-                                'text': f"{user_nickname} défie {target_nickname} !"
+                                'text': f"{user_nickname} défie <@{target_user}> !"
                             }
                         },
                         {
