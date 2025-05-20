@@ -466,9 +466,9 @@ def get_leaderboard():
                 SELECT 
                     player_id,
                     player_name,
-                    COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
-                    COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
-                    COUNT(CASE WHEN result IS NULL THEN 1 END) as losses
+                    COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
+                    COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
+                    COUNT(CASE WHEN result IS NULL THEN 1 ELSE 0 END) as losses
                 FROM (
                     SELECT winner_id as player_id, winner_name as player_name, result FROM game_results
                     UNION ALL
@@ -546,9 +546,9 @@ def get_move_stats():
               AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
         )
         SELECT move,
-               COUNT(CASE WHEN result = 'WIN' THEN 1 END)  as wins,
-               COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
-               COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+               COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END)  as wins,
+               COUNT(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+               COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
                count(*)                                    as total_games
         FROM game_results
         GROUP BY move
@@ -616,9 +616,9 @@ def get_player_stats(user_id):
               {}
         )
         SELECT move,
-               COUNT(CASE WHEN result = 'WIN' THEN 1 END)  as wins,
-               COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
-               COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+               COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END)  as wins,
+               COUNT(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+               COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
                count(*)                                    as total_games
         FROM game_results
         GROUP BY move
@@ -700,9 +700,9 @@ def get_head_to_head_stats(player1_id, player2_id):
         move_stats AS (
             SELECT 
                 move,
-                COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
-                COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
-                COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+                COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
+                COUNT(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+                COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
                 COUNT(*) as total_games
             FROM game_results
             GROUP BY move
@@ -818,9 +818,9 @@ def get_move_stats_breakdown(user_id=None):
         SELECT 
             move,
             play_order,
-            COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
-            COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
-            COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+            COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
+            COUNT(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+            COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
             COUNT(*) as total_games
         FROM all_moves
         GROUP BY move, play_order
@@ -915,9 +915,9 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
             SELECT 
                 move,
                 play_order,
-                COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
-                COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses,
-                COUNT(CASE WHEN result = 'DRAW' THEN 1 END) as draws,
+                COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
+                COUNT(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+                COUNT(CASE WHEN result = 'DRAW' THEN 1 ELSE 0 END) as draws,
                 COUNT(*) as total_games
             FROM game_results
             GROUP BY move, play_order
@@ -1005,7 +1005,7 @@ def get_head_to_head_stats_breakdown(player1_id, player2_id):
                     opponent_move,
                     play_order,
                     COUNT(*) as times_played,
-                    COALESCE(COUNT(CASE WHEN result = 'WIN' THEN 1 END)::float / NULLIF(COUNT(CASE WHEN result <> 'DRAW' THEN 1 END)::float, 0),0) as win_rate
+                    COALESCE(COUNT(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(CASE WHEN result <> 'DRAW' THEN 1 END)::float, 0),0) as win_rate
                 FROM game_results
                 GROUP BY  play_order, opponent_move
                 ORDER BY win_rate DESC, times_played DESC
