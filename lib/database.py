@@ -461,7 +461,7 @@ def get_leaderboard():
                 p.losses,
                 p.draws,
                 p.wins + p.losses as total_games,
-                ROUND(CAST(CAST(p.wins AS FLOAT) / (NULLIF(p.wins, 0)+NULLIF(p.losses, 0)) * 100 AS numeric), 1) as win_rate
+                COALESCE(ROUND(CAST(CAST(p.wins AS FLOAT) / (NULLIF(p.wins, 0)+NULLIF(p.losses, 0)) * 100 AS numeric), 1),0) as win_rate
             FROM (
                 SELECT 
                     player_id,
